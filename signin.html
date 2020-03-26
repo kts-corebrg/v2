@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title></title>
+		
+		<style>
+
+body {
+    font: 10pt "맑은 고딕", arial, tahoma;
+	position: fixed; top: 0; right: 0; bottom: 0; left: 0;
+    margin: 0; padding: 0;
+    background: #f9f9f9 url("/img/kts/signin/background.png") no-repeat center center fixed;
+    display: flex; align-items: center; justify-content: center;
+}
+
+main {
+    width: 430px;
+    height: 460px;
+    background-color: #3a3a3a;
+    border-right: 5px solid #e83919;
+    position: relative;
+    display: flex; flex-direction: column;
+}
+
+img.raider {
+    position: absolute; right: 0; top: 0;
+    width: 81px; height: 98px;
+    transform: translateY(-100%);
+}
+
+p.title {
+    text-align: center;
+    margin: 3em 0 0 0;
+    flex: none;
+}
+
+#agent {
+    position: absolute; top: -1em; left: 50%;
+    transform: translate(-50%, -100%);
+    margin: 0;
+}
+
+form {
+    flex: 1;
+    padding: 0 40px;
+}
+
+input {
+	width: 100%;
+	box-sizing: border-box;
+	padding: 1em;
+	border: 1px solid #ddd;
+	border-radius: 3px 3px 3px 3px;
+    background-color: #ffffff;
+
+}
+
+.footer {
+    display: flex;
+}
+
+.footer >input {
+    flex: 1;
+}
+
+input[name="username"] {
+	background: #ffffff url("/img/kts/signin/user.png") no-repeat 1em center;
+    background-size: 2em;
+	padding-left: 4em;
+}
+
+input[name="password"] {
+	background: #ffffff url("/img/kts/signin/lock.png") no-repeat 1em center;
+    background-size: 2em;
+	padding-left: 4em;
+}
+
+input[type=reset] {
+	padding: 1em;
+	background: #e83919 url("/img/kts/signin/cancel.png") no-repeat center center;
+}
+
+input[type=submit] {
+	padding: 1em;
+	background: #e83919 url("/img/kts/signin/login.png") no-repeat center center;
+}
+
+		</style>
+
+		<script>
+
+function onCancel(e) {
+	e.preventDefault();
+	
+	cancel();
+}
+
+function onSignIn(e) {
+	e.preventDefault();
+    
+    document.body.classList.add("loading");
+
+    window.thread.postMessage([window.agent, {
+            command: "signin",
+            username: this.elements["username"].value,
+            password: hex_md5(this.elements["password"].value)    
+        }]);
+}
+
+function cancel() {
+    window.localStorage.removeItem("agent");
+
+    window.location.replace("/connect.html");
+}
+
+		</script>
+	</head>
+	
+	<body>
+		<main>
+            <h2 id="agent"></h2>
+            <img src="/img/kts/signin/raider.png" class="raider">
+            <p class="title">
+                <img src="/img/kts/signin/title.png" width="324" height="43">
+                <br>
+                <img src="/img/kts/signin/user_title.png" width="86" height="99">
+            </p>
+            <form id="signin" class="account">
+                <p>
+                    <img src="/img/kts/signin/id.png">
+                    <input type="text" name="username" value="root" required>
+                </p>
+                <p>
+                    <img src="/img/kts/signin/password.png">
+                    <input type="password" name="password" value="root" required>
+                </p>
+                <div class="footer">
+                    <input type="reset" value="">
+                    <input type="submit" value="">
+                </div>
+            </form>
+        </main>
+        
+		
+		<div class="bg_loading"></div>
+        
+        <script src="/js/md5.js"></script>
+		<script>
+
+var
+    thread = new Worker("/js/post_request.js"),
+    agent = window.localStorage.getItem("agent");
+
+if (!agent) {
+    window.location.replace("/connect.html");
+}
+
+document.getElementById("agent").textContent = agent;
+
+window.thread.onmessage = e => {
+    switch(e.data.status) {
+		case 200:
+			top.signIn(JSON.parse(e.data.responseText));
+			
+			break;
+		case 401:
+            alert("Error!\n\n"+
+                "계정이 존재하지 않거나 비밀번호가 일치하지 않습니다.");
+			
+			document.getElementById("signin").elements["username"].select();
+			
+			break;
+		case 503:
+            alert("Error!\n\n"+
+                "에이전트가 서비스를 준비하고 있습니다.");
+
+			break;
+		default:
+            alert("Error!\n\n"+
+                "에이전트가 응답하지 않습니다.\n\n"+
+                "상태: "+ e.data.status);
+			
+			cancel();
+    }
+
+    document.body.classList.remove("loading");
+};
+
+document.getElementById("signin").onsubmit = onSignIn;
+document.getElementById("signin").onreset = onCancel;
+
+
+		</script>
+	
+	</body>
+	
+</html>

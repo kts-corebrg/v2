@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>CeMS Console</title>
+		
+		<style>
+
+@import "/css/index.css";
+
+		</style>
+		<script src="js/google.js"></script>
+		<script>
+
+// public
+function showDialog() {
+	var opener = this,
+		url = [].shift.call(arguments),
+		args = arguments;
+	
+	window.dialog.onload = function () {
+		this.contentWindow.initialize.apply(opener, args);
+		
+		document.body.classList.add("dialog");
+	};
+	
+	window.dialog.src = url;
+}
+
+// public
+function closeDialog() {
+	document.body.classList.remove("dialog");
+}
+
+function clearLog() {
+	window.logCount = 0;
+    
+    closeDialog();
+
+	document.body.classList.remove("log");
+}
+
+function getMessage(status) {
+	switch(status) {
+	case 401:
+
+		return "세션이 만료되었습니다!.";
+	case 409:		
+	
+		return "다른 관리자 계정이 데이터베이스를 수정하였습니다.\n"
+			+"콘솔을 다시 시작합니다.";
+	case 400:
+
+		return "잘못된 요청입니다.";
+	case 503:
+
+		return "서버가 올바르게 동작하지 않습니다.";
+	default:
+	
+		return "에이전트가 응답하지 않습니다.";
+	}
+}
+
+function onUpdate(status, millis) {
+	setStatus(millis, status);
+}
+
+function onEvent(status, event) {
+    if (event.level < 0) {
+        alert("Notice.\n\n"+
+            "관리자가 서비스를 종료하였습니다.");
+
+        //TODO
+        
+        return;
+    }
+
+    window.logCount++;
+    
+    window.count.textContent = window.logCount > 9? "9+": window.logCount;
+
+    switch(event.origin) {
+    case "critical":
+    case "status":
+    case "snmp":
+    case "updown":
+        break;
+
+    case "register":
+    case "search":
+    case "system":
+    case "warning":
+        break;
+    }
+
+    if (event.level == 2) {
+        try {
+            window.sound.play();
+        } catch (e) {
+            console.log(e);
+        };
+    }
+
+    window.log.textContent = event.message;
+
+    try {
+        window.frame.contentWindow.onEvent(event);
+    }
+    catch (e) {}
+    
+    document.body.classList.add("log");
+}
+
+		</script>
+		<script>
+
+function postRequest(request, onResponse, timeout) {
+	const xhr = new XMLHttpRequest();
+	
+	xhr.open("POST", window.localStorage.getItem("agent"), true);
+	xhr.withCredentials = true;
+	xhr.onloadend = onResponse;
+	
+	if (timeout) {
+		xhr.timeout = timeout;
+	}
+	
+	xhr.send(JSON.stringify(request));
+}
+
+		</script>
+	</head>
+	
+	<body class="authorized">
+		<article class="itahm">
+			<header>
+				<div>
+					<ul class="logo">
+						<li>
+							<img src="/img/logo.png">
+						</li>
+					</ul>
+					<ul class="icon">
+                        <li>
+							<a href="/dashboard.html" id="dashboard" target="main" class="selected">
+								<img src="/img/header/dashboard.png">
+							</a>
+							대시보드
+						</li>
+						<li>
+							<a href="/list.html" id="node" target="main">
+								<img src="/img/header/list.png">
+							</a>
+							노드
+						</li>
+                        <li>
+							<a href="/link.html" id="line" target="main">
+								<img src="/img/header/line.png">
+							</a>
+							링크
+						</li>
+						<li>
+							<a href="/event.html" id="event" target="main">
+								<img src="/img/header/event.png">
+							</a>
+							이벤트
+						</li>
+						<li>
+							<a href="/information.html" id="setting" target="main">
+								<img src="/img/header/information.png">
+							</a>
+							정보
+                        </li>
+                    </ul>
+					<ul id="status" class="status">
+						<li class="normal"></li>
+						<li></li>
+						<li></li>
+					</ul>
+				</div>
+			</header>
+			<main>
+				<iframe id="frame" name="main"></iframe>
+            </main>
+		</article>
+		<div class="log">
+			<a href="/event.html" target="main">
+				<span id="count">99</span>
+				<span id="log">message</span>
+			</a>
+		</div>
+		
+		<iframe id="dialog"></iframe>
+		
+		<div class="bg_loading"></div>
+		
+		<script src="/js/ITAhM.js"></script>
+		<script src="/js/object.js"></script>
+        <script src="/js/icon.js"></script>
+        <script src="/js/listener.js"></script>
+        
+		<script>
+
+var
+    account = {
+        username: "root",
+        level: 0
+    },
+	frame = document.getElementById("frame"),
+	count = document.getElementById("count"),
+	dialog = document.getElementById("dialog"),
+	log = document.getElementById("log"),
+	sound = new Audio("siren.mp3"),
+	logCount = 0;
+
+window.localStorage.setItem("agent", "http://127.0.0.1:2014");
+
+document.querySelector("div.log").onclick = function () {
+	selectMenu("event");
+};
+
+(function (container) {
+	window.setStatus = function (elapse, status) {
+		var item = container.firstElementChild;
+
+		if (!item.classList.contains("normal")) {
+			item = container.insertBefore(container.lastElementChild, item);
+		}
+
+		switch(status) {
+		case 200:
+			item.textContent = elapse + " ms";
+			item.className = "normal";
+			
+			break;
+
+		case 0:
+		    item.textContent = "지연";
+			item.className = "shutdown";
+
+			break;
+		
+		default:
+			item.textContent = "상태 "+ status;
+			item.className = "status";
+		}
+
+		item.title = new Date().toLocaleString();
+	};
+
+}) (document.getElementById("status"));
+
+(function (list) {
+	function onClick(e) {
+		[].forEach.call(list, a => a.classList.remove("selected"));
+
+		this.classList.add("selected");
+	}
+	
+	[].forEach.call(list, a => {
+        if (!a.onclick) {
+            a.onclick = onClick;
+        }
+    });
+
+	window.selectMenu = id => {
+		document.getElementById(id).click();
+	};
+}) (document.querySelector("header").querySelectorAll("a"));
+
+postRequest({
+    command: "get",
+    target: "setting"
+}, function () {
+    switch (this.status) {
+    case 200:
+        window.settingData = JSON.parse(this.responseText);
+        
+        startThread(window.localStorage.getItem("agent"));
+
+        window.frame.src="/dashboard.html";
+
+        break;
+    default:
+        alert(getMessage(this.status));
+
+        console.log(this.responseText && JSON.parse(this.responseText).error);
+    }
+});
+		</script>
+	
+	</body>
+	
+</html>

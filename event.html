@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>Event @ ITAhM</title>
+		
+		<style>
+@import "/css/style.css";
+@import "/css/fa.css";
+
+body {
+    margin: 0; padding: 0;
+	position: fixed; top: 0; right: 0; bottom: 0; left: 0;
+}
+
+main {
+    max-width: 1024px; height: 100%;
+    margin: 0 auto;
+    display: flex;
+	flex-direction: column;
+}
+
+h1, h2 {
+	color: #fff;
+}
+
+header {
+    position: relative;
+	flex: none;
+	color: #fff;
+	padding: 1em;
+}
+
+header::after {
+    font-weight: bold;
+    font-size: 1.2em;
+    content: attr(data-date);
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+input[type=date] {
+	font-family: arial, tahoma, "맑은 고딕";
+	padding: 0.5em;
+}
+
+.container {
+	flex: 1;
+    overflow-y: auto;
+	display: flex;
+	flex-direction: column;
+}
+
+ul {
+	list-style: none;
+	padding: 0; margin: 0;
+}
+
+.header {
+    flex: none;
+	padding: 0.5em 0;
+	border-bottom: 1px solid #aaa;
+	background-color: #0084ff;
+	color: #fff;
+	font-weight: bold;
+	border-bottom: 4px solid #92a7af;
+	border-radius: 3px 3px 0 0;
+	text-shadow: 1px 1px 1px #00f;
+}
+
+.header li {
+	text-align: center;
+}
+
+.item li:not(:last-child) {
+	border-right: 1px solid transparent;
+}
+
+.header li:not(:last-child) {
+	border-right-color: #fff;
+}
+
+#list {
+	flex: 1;
+	background-color: #fafafa;
+	overflow-y: auto;
+}
+
+.item {
+	display: flex;
+	align-items: center;
+	border: 1px solid transparent;
+}
+
+.item> li {
+	padding: 0.5em;
+	box-sizing: border-box;
+	overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.item> li:nth-child(1) {
+	flex: none;
+	width: 5em;
+}
+
+.item> li:nth-child(2) {
+	width: 100px;
+	text-align: center;
+}
+
+.item> li:nth-child(3) {
+	width: 200px;
+	text-align: center;
+}
+
+.item> li:nth-child(4) {
+	flex: 1;
+}
+
+.item> li:nth-child(5) {
+	flex: none;
+    width: 3em;
+}
+
+.item> li:nth-child(5)::before {
+    cursor: pointer;
+}
+
+.item:hover> li:nth-child(5)::before {
+    font: 1.6em "Font Awesome 5 Free";   
+    content: "\f4ad";
+    color: #24292e;
+}
+
+.item.memo> li:nth-child(5)::before {
+    font: 1.6em "Font Awesome 5 Free";
+    content: "\f4ad";
+    color: #5cb85c;
+}
+
+#list> .item:nth-child(odd) {
+	background-color: #ebebeb;
+}
+
+#list .item li:nth-child(1) img {
+	display: block;
+	margin: auto;
+	width: 24px; height: 24px;
+}
+
+#list .item:not(:last-child) {
+	border-bottom: 1px solid #c1c3d1;
+}
+
+.glyph {
+    font: 2em "Font Awesome 5 Free";
+    cursor: pointer;
+}
+
+details {
+    position: relative;
+    display: inline-block;
+}
+
+summary {
+    outline: none;
+}
+
+summary::-webkit-details-marker {
+  display: none;
+}
+
+.popup {
+    position: absolute; top: 100%; left: 0;
+    border-radius: 3px;
+    border: 1px solid rgba(27,31,35,.15);
+    box-shadow: 0 1px 15px rgba(27,31,35,.15);
+    padding: 1em;
+    margin-top: 8px;
+    background-color: #ffffff;
+    color: #24292e;
+    z-index: 1;
+}
+
+.popup::after {
+    position: absolute; top: -14px; right: auto; left: 10px;
+    display: inline-block;
+    content: "";
+    border: 7px solid transparent;
+    border-bottom-color: #fff;
+}
+
+		</style>
+		<script>
+        
+// public
+function closeDialog(memo) {
+    if (memo) {
+        setMemo($.selected, memo);
+
+        $.eventData[$.selected.dataset.id].memo = memo;
+    }
+}
+
+function getDateString(mills) {
+	var date = new Date(mills),
+		yyyy = date.getFullYear(),
+		mm = date.getMonth() +1,
+		dd = date.getDate();
+	
+	return yyyy +"년 "+ (mm > 9? "": "0") + mm +"월"+ (dd > 9? "": "0") + dd +"일";
+}
+
+function toTimeString(mills) {
+	var date = new Date(mills),
+		hh = date.getHours(),
+		mm = date.getMinutes(),
+		ss = date.getSeconds();
+	
+	return (hh > 9? "": "0") + hh +":"+ (mm > 9? "": "0") + mm +":"+ (ss > 9? "": "0") + ss;
+}
+
+function onMemo(e) {
+    $.selected = this.parentNode;
+
+    const id = $.selected.dataset.id;
+
+    top.showDialog.call(window, "/dialog/memo.html", Number(id), $.eventData[id].memo);
+}
+
+function setMemo(ul, memo) {
+    ul.classList.add("memo");
+
+    ul.querySelector("li:last-of-type").title = 
+        ["작성자 : "+ memo.username, "작성일 : "+ getDateString(memo.edit) +" "+ toTimeString(memo.edit)].join("\n");
+}
+
+function createItem(event) {
+	var ul = document.createElement("ul"),
+		icon = ul.appendChild(document.createElement("li")).appendChild(document.createElement("img")),
+        memo = document.createElement("li");
+	
+	ul.appendChild(document.createElement("li")).textContent = toTimeString(event.timestamp);
+	ul.appendChild(document.createElement("li")).textContent = event.name;
+	
+	switch(event.origin) {
+	case "exception":
+		return;
+		
+	case "critical":
+	case "snmp":
+	case "register":
+		
+		break;
+	case "status":
+	case "updown":
+		
+		break;
+	case "warning":
+		
+		break;	
+	case "system":
+		break;
+		default:
+	}
+
+	ul.appendChild(document.createElement("li")).textContent = event.message;
+
+	ul.classList.add("item");
+	ul.dataset.id = event.eventID;
+
+	icon.src = event.level === 1? "/img/siren.png": event.level === 2? "/img/warning.png": "/img/normal.png";
+	
+    ul.appendChild(memo);
+    
+    memo.onclick = onMemo;
+
+    if (event.memo) {
+        setMemo(ul, event.memo);
+    }
+
+	return ul;
+}
+
+        </script>
+	</head>
+	
+	<body class="loading">	
+        <main>
+            <header>
+                <details title="날짜 선택">
+                    <summary class="glyph">&#xf073;</summary>
+                    <form class="popup">
+                        <input type="date" name="date">        
+                    </form>
+                </details>
+                <span class="glyph" id="export" title="CSV 저장">&#xf019;</span>
+            </header>
+            <div class="container">
+                <div class="header">
+                    <ul class="item">
+                        <li>상태
+                        <li>시간
+                        <li>대상
+                        <li>이벤트 메세지 (<span id="count"></span>)
+                    </ul>
+                </div>
+                <div id="list"></div>
+            </div>
+        </main>
+  		
+		<div class="bg_loading"></div>
+        
+        <script src="js/ITAhM.js"></script>
+		<script>
+
+const $ = {};
+
+(function (form) {
+	const today = new Date(),
+		list = document.getElementById("list");
+	
+	top.clearLog();
+
+	postRequest(today.setHours(0, 0, 0, 0));
+
+	// KST
+	today.setHours(9, 0, 0, 0);
+
+	form.elements["date"].valueAsDate = today;
+
+	form.elements["date"].onchange = function (e) {
+		postRequest(this.valueAsDate.setHours(0, 0, 0, 0));
+	};
+
+	function postRequest(mills) {
+		document.body.classList.add("loading");	
+
+		for(let log; log = window.list.firstChild;) {
+			window.list.removeChild(log);
+		}
+		
+		top.postRequest({
+			command: "get",
+            target: "event",
+			date: mills.toString()
+		}, function () {
+			switch (this.status) {
+			case 200:
+                document.body.querySelector("header").dataset.date = 
+                $.date = getDateString(mills);
+                $.eventData = JSON.parse(this.responseText);
+                $.indexArray = Object.keys($.eventData).sort(function (a, b) {
+                    return parseInt(a) - parseInt(b);
+                });
+
+				const
+                    df = document.createDocumentFragment(),
+                    count = $.indexArray.length;
+                
+				
+				for (let i=0, item; i<count; i++) {
+					if (item = createItem($.eventData[$.indexArray[i]])) {
+						df.appendChild(item);
+					}
+				}
+				
+				window.list.appendChild(df);
+				
+				list.scrollTop = list.scrollHeight;	
+				
+				document.getElementById("count").textContent = count;
+
+				document.body.classList.remove("loading");
+		
+				break;
+			default:
+				alert(top.getMessage(this.status));
+
+				console.log(this.responseText && JSON.parse(this.responseText).error);
+			}
+		});
+	}
+}) (document.querySelector("form"));
+
+document.getElementById("export").onclick = function (e) {
+    const rows = [];
+	
+	rows[0] = "Index,Time,Status,Name,Message,Action";
+
+    for (let i=0, count=$.indexArray.length, event; i<count; i++) {
+        event = $.eventData[$.indexArray[i]];
+
+        if (event.origin === "exception") {
+            continue;
+        }
+
+        rows.push([
+            event.eventID,
+            toTimeString(event.timestamp),
+            event.level == 1? "임계": event.level == 2? "장애": "정상",
+            event.name,
+            event.message,
+            "memo" in event? ("\""+ event.memo.value.replace(/\"/g, "'") +"\""): ""
+        ].join(","));
+    }
+
+    ITAhM.util.download(new Blob(["\ufeff", rows.join("\n")] ,{
+		type: "text/csv;charset=utf-8;"
+	}), $.date +".csv");
+};
+
+		</script>
+	
+	</body>
+	
+</html>

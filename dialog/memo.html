@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>dialog</title>
+		
+		<style>
+@import "/css/style.css";
+@import "/css/fa.css";
+
+body {
+	margin: 0; padding: 0;
+	position: fixed; top: 0; right: 0; bottom: 0; left: 0;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	background-color: rgba(0, 0, 0, .8);
+}
+
+body, input, textarea {
+    font-family: "맑은 고딕", Tahoma, Arial;
+}
+
+form {
+	width: 360px;
+	padding: 20px;
+	background-color: #fff;
+	position: relative;
+}
+
+h2 {
+	margin: 0; padding: 10px;
+	background-color: #0084ff;
+    color: #fff;
+    text-shadow: 0 2px 3px #000;
+}
+
+input.text,
+input[type="submit"],
+textarea {
+	width: 100%;
+	box-sizing: border-box;
+	padding: .5em;
+}
+
+input[type="checkbox"] {
+	vertical-align: middle;
+}
+
+textarea {
+    resize: none;
+}
+
+div.table {
+	margin: 1em 0;
+}
+
+div.table ul {
+	display: flex;
+	align-items: center;
+	list-style: none;
+	padding: 1px;
+	margin: 0;
+}
+
+div.table li:first-child {
+	text-align: right;
+	padding: .5em;
+	flex: 1;
+}
+
+div.table li:last-child {
+	flex: 3;
+}
+
+footer {
+	display: flex;
+	margin-top: 1em;
+}
+
+footer> input {
+    font-family: "Font Awesome 5 Free";
+	flex: 1;
+	border-radius: 1.2em;
+	background-color: #0084ff;
+	color: #fff;
+	border: .2em solid transparent;
+	padding: .5em;
+}
+
+footer> input:hover {
+	background-color: #fff;
+	color: #0084ff;
+	border-color: #0084ff;
+}
+
+#close {
+    font-family: "Font Awesome 5 Free";
+    display: block;
+    float: right;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+#close:hover {
+    transform: scale(1.2);
+}
+
+.bg_loading {
+	position: absolute;
+}
+
+		</style>
+
+	</head>
+	
+	<body class="loading">
+	
+		<form autocomplete="off">
+			<h2>
+                조치 사항
+                <span  id="close" title="대화창 닫기">&#xf00d;</span>
+            </h2>
+			<div class="table">
+				<ul>
+					<li>작성자</li>
+					<li>
+						<input type="text" name="username" class="table text" disabled>
+					</li>
+                </ul>
+                <ul>
+					<li>작성일</li>
+					<li>
+						<input type="text" name="edit" class="table text" disabled>
+					</li>
+				</ul>
+				<ul>
+					<li>메모</li>
+					<li>
+						<textarea name="memo" rows="5" required></textarea>
+					</li>
+                </ul>
+            </div>
+			<footer>
+				<input type="submit" value="&#xf044; 작성">
+			</footer>
+			<div class="bg_loading"></div>
+		</form>
+		
+		<script>
+
+const $ = {
+    request: {
+        target: "memo",
+        command: "set"
+    }
+};
+
+(function (form) {
+	let opner;
+
+	form.onsubmit = function (e) {
+		e.preventDefault();
+	
+		document.body.classList.add("loading");
+
+        const memo = {
+            username: top.account.username,
+            edit: new Date().getTime(),
+            value: form.elements["memo"].value
+        };
+
+        $.request.memo = memo;
+
+		top.postRequest($.request, function () {
+			switch (this.status) {
+			case 200:
+				opener && opener.closeDialog(memo);
+				
+				top.closeDialog();
+
+				break;
+			default:
+				alert(top.getMessage(this.status));
+
+				console.log(this.responseText && JSON.parse(this.responseText).error);
+			}
+
+			document.body.classList.remove("loading");
+		});
+	};
+
+// public
+	window.initialize = function (id, memo) {
+		opener = this;
+
+        $.request.event = id;
+
+		if (memo) {
+			form.elements["username"].value = memo.username;
+            form.elements["edit"].value = new Date(memo.edit).toLocaleString();
+            form.elements["memo"].value = memo.value;
+		}
+
+		document.body.classList.remove("loading");
+	};
+
+	document.getElementById("close").onclick = function () {
+        opener && opener.closeDialog();
+
+		top.closeDialog(true);
+	};
+}) (document.querySelector("form"));
+
+		</script>
+	
+	</body>
+	
+</html>

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title></title>
+		
+		<style>
+
+body {
+    font-family: arial, tahoma, "맑은 고딕";
+    font-size: 10pt;
+	position: fixed; top: 0; right: 0; bottom: 0; left: 0;
+    margin: 0; padding: 0;
+    background: #f9f9f9 url("/img/kts/signin/background.png") no-repeat center center fixed;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+main {
+    width: 430px;
+    height: 460px;
+    background-color: #3a3a3a;
+    border-right: 5px solid #e83919;
+    position: relative;
+    display: flex; flex-direction: column;
+}
+
+img.raider {
+    position: absolute; top: 0; right: 0;
+    width: 81px; height: 98px;
+    transform: translateY(-100%);
+}
+
+p.title {
+    text-align: center;
+    margin: 3em 0;
+    flex: none;
+}
+
+form {
+    flex: 1;
+    padding: 40px;
+}
+
+input {
+	width: 100%;
+	box-sizing: border-box;
+	padding: 1em;
+	border: 1px solid #ddd;
+	border-radius: 3px 3px 3px 3px;
+}
+
+input[type=submit] {
+	padding: 2em;
+	background: #e83919 url("/img/kts/signin/connect.png") no-repeat center center;
+}
+
+input[name="ip"] {
+	background: #ffffff url("/img/kts/signin/ip_bg.png") no-repeat 1em center;
+    background-size: 2em;
+	padding-left: 4em;
+}
+
+input[name="tcp"] {
+	background: #ffffff url("/img/kts/signin/tcp_bg.png") no-repeat 1em center;
+    background-size: 2em;
+	padding-left: 4em;
+}
+
+.bg_loading {
+	position: fixed; top: 0; right: 0; bottom: 0; left: 0;
+	background: #4d525a url("/img/loading.gif") no-repeat center;
+	background-size: 32px 32px;
+	opacity: .5;
+}
+
+body.ready,
+body:not(.loading) .bg_loading {
+    display: none;
+}
+
+		</style>
+	</head>
+	
+	<body class="ready" lang="ko">
+		<main>
+            <img src="/img/kts/signin/raider.png" class="raider">
+            <p class="title">
+                <img src="/img/kts/signin/title.png" width="324" height="43">
+            </p>
+            <form id="connect">
+                <p>
+                    <img src="/img/kts/signin/ip.png">
+                    <input type="text" name="ip" placeholder="IP address" autofocus required>
+                </p>
+                <p>
+                    <img src="/img/kts/signin/tcp.png">
+                    <input type="text" name="tcp" placeholder="TCP port" required>
+                </p>
+                <input type=submit value="">
+            </form>
+		</main>
+		
+		<div class="bg_loading"></div>
+
+		<script>
+
+var
+    thread = new Worker("/js/thread.js"),
+    agent = window.localStorage.getItem("agent");
+
+window.thread.onmessage = e => {
+    switch(e.data.status) {
+        case 200:
+            window.localStorage.setItem("agent", agent);
+
+            try {
+                top.signIn(JSON.parse(e.data.responseText));
+            }
+            catch(e) {
+                alert("Error!\n\n서비스가 비정상 종료 되었습니다.\n"+
+                "모든 브라우저를 닫고 다시 시작하십시오.");
+
+                document.body.classList.remove("ready");
+            }
+
+            break;
+        
+        case 400:
+            window.localStorage.setItem("agent", agent);
+
+           window.location.replace("/signin.html");
+            
+            break;
+        case 503:
+            window.localStorage.setItem("agent", agent);
+
+            alert("Error!\n\n"+
+                "에이전트가 서비스를 준비하고 있습니다.");
+            
+            document.body.classList.remove("ready");
+
+            break;
+        case -1:
+            console.trace(e.data.exception);
+        default:
+            if (window.localStorage.getItem("agent")) {
+                window.localStorage.removeItem("agent");
+            } else {
+                alert("Error!\n\n"+
+                    "에이전트가 응답하지 않습니다.\n"+
+                    "오류코드 "+ e.data.status);
+            }
+
+            document.body.classList.remove("ready");
+    }
+
+    document.body.classList.remove("loading");
+}
+
+if (agent) {
+    const
+        form = document.getElementById("connect"),
+        ar = agent.split("//")[1].split(":");
+
+    form.elements["ip"].value = ar[0];
+    form.elements["tcp"].value = ar[1];
+
+    trySignIn(agent);
+}
+else {
+    const form = document.getElementById("connect");
+    
+    document.body.classList.remove("ready");
+
+    form.onsubmit = function (e) {
+        e.preventDefault();
+        
+        document.body.classList.add("loading");
+
+        agent = window.location.protocol +"//"+ this.elements["ip"].value +":" +this.elements["tcp"].value;
+
+        trySignIn(agent);
+    };
+}
+
+function trySignIn(agent) {
+    window.thread.postMessage({
+        action: "initialize",
+        agent: agent
+    });
+
+    window.thread.postMessage({
+        action: "request",
+        request: {
+            command: "signin"
+        }
+    });
+}
+		</script>
+	
+	</body>
+	
+</html>
