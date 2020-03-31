@@ -6,6 +6,7 @@
 		
 		<style>
 @import "/css/style.css";
+@import "/css/fa.css";
 
 body {
 	margin: 0; padding: 0;
@@ -86,17 +87,15 @@ footer> input:hover {
 }
 
 #close {
-	font-size: 20px;
-	position: absolute; top: 5px; right: 5px;
-	border: 3px solid transparent;
+    font-family: "Font Awesome 5 Free";
+    display: block;
+    float: right;
+    font-weight: bold;
+    cursor: pointer;
 }
 
 #close:hover {
-	border-color: #c68e17;
-}
-
-#close::before, #close::after {
-	background-color: #c68e17;
+    transform: scale(1.2);
 }
 
 .bg_loading {
@@ -108,14 +107,33 @@ body:not(.edit) input[type=reset] {
 }
 
 		</style>
+        <script>
 
+function showMessage(xhr) {
+    switch (xhr.status) {
+    case 401:
+        alert("Notice!\n\n"+ "세션 만료.");
+
+        break;
+    default:
+        alert(`Error!\n\n오류코드 ${xhr.status}.`);
+    }
+
+    try {
+        console.log(JSON.parse(xhr.responseText).error);
+    } catch (e) {}
+}
+
+        </script>
 	</head>
 	
 	<body class="loading">
 	
 		<form autocomplete="off">
-			<i class="btn_close round" id="close"></i>
-			<h2>수신자 정보</h2>
+			<h2>
+                <span  id="close" title="대화창 닫기">&#xf00d;</span>
+                수신자 정보
+            </h2>
 			<div class="table">
 				<ul>
 					<li>이름</li>
@@ -145,8 +163,13 @@ body:not(.edit) input[type=reset] {
 			</footer>
 			<div class="bg_loading"></div>
 		</form>
-		
+        
+        <script src="/js/request.js"></script>
 		<script>
+
+const $ = {
+        request: new Request()
+    };
 
 (function (form) {
 	let opner;
@@ -162,7 +185,7 @@ body:not(.edit) input[type=reset] {
 
 		document.body.classList.add("loading");
 
-		top.postRequest({
+		$.request.execute({
 			command: "remove",
 			target: "user",
 			name: user
@@ -175,9 +198,7 @@ body:not(.edit) input[type=reset] {
 
 				break;
 			default:
-				alert(top.getMessage(this.status));
-
-				console.log(this.responseText && JSON.parse(this.responseText).error);
+				showMessage(this);
 			}
 
 			document.body.classList.remove("loading");
@@ -214,7 +235,7 @@ body:not(.edit) input[type=reset] {
 
 		document.body.classList.add("loading");
 
-		top.postRequest(request, function () {
+		$.request.execute(request, function () {
 			switch (this.status) {
 			case 200:
 				opener && opener.reload();
@@ -223,9 +244,7 @@ body:not(.edit) input[type=reset] {
 
 				break;
 			default:
-				alert(top.getMessage(this.status));
-
-				console.log(this.responseText && JSON.parse(this.responseText).error);
+                showMessage(this);
 			}
 
 			document.body.classList.remove("loading");

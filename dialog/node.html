@@ -8,7 +8,7 @@
 		
 		<style>
 @import "/css/style.css";
-@import "/css/dialog.css";
+@import "/css/fa.css";
 
 body {
 	position: fixed; top: 0; right: 0; bottom: 0; left: 0;
@@ -98,6 +98,18 @@ footer> input:hover {
 	border-color: #0084ff;
 }
 
+#close {
+    font-family: "Font Awesome 5 Free";
+    display: block;
+    float: right;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+#close:hover {
+    transform: scale(1.2);
+}
+
 .container {
     position: relative;
 }
@@ -130,9 +142,6 @@ optgroup::before {
 function isIPv4(s) {
     return s.match(/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/)? true: false;
 }
-		</script>
-		
-		<script>
 
 function trimLabel(labels) {
 	var array = labels.split(","),
@@ -148,15 +157,30 @@ function trimLabel(labels) {
 	
 	return result.join(",");
 }
-		
+
+function showMessage(xhr) {
+    switch (xhr.status) {
+    case 401:
+        alert("Notice!\n\n"+ "세션 만료.");
+
+        break;
+    default:
+        alert(`Error!\n\n오류코드 ${xhr.status}.`);
+    }
+
+    try {
+        console.log(JSON.parse(xhr.responseText).error);
+    } catch (e) {}
+}
+
 		</script>
 	</head>
 	
 	<body class="loading">
 	
 		<form class="rounded">
-			<i class="btn_close round" id="close"></i>
 			<h2>
+                <span  id="close" title="대화창 닫기">&#xf00d;</span>
 				장비 정보
             </h2>
             <div class="container">
@@ -209,17 +233,14 @@ function trimLabel(labels) {
                 <div class="bg_loading"></div>
 			</div>
 		</form>
-		<script src="/js/ITAhM.js"></script>
+        <script src="/js/ITAhM.js"></script>
+        <script src="/js/request.js"></script>
         <script src="/js/icon.js"></script>
 		<script>
 
-const
-    thread = new Worker("/js/thread.js");
-
-thread.postMessage({
-    action: "initialize",
-    agent: window.localStorage.getItem("agent")
-});
+const $ = {
+    request: new Request()
+};
 
 function close() {
 	top.closeDialog(true);
@@ -290,7 +311,7 @@ document.getElementById("close").onclick = close;
             request.command = "add";
         }
 
-		top.postRequest(request, function () {
+		$.request.execute(request, function () {
 			switch (this.status) {
 			case 200:
                 opener.location.reload();
@@ -317,9 +338,7 @@ document.getElementById("close").onclick = close;
 
 				break;
 			default:
-				alert(top.getMessage(this.status));
-
-				console.log(this.responseText && JSON.parse(this.responseText).error);
+                showMessage(this);
 			}
 		});
 	};
@@ -333,7 +352,7 @@ document.getElementById("close").onclick = close;
 
 		document.body.classList.add("loading");
 		
-		top.postRequest({
+		$.request.execute({
 			command: "remove",
 			target: "node",
 			id: nodeID
@@ -348,9 +367,7 @@ document.getElementById("close").onclick = close;
                 case 409:
 
 				default:
-					alert(top.getMessage(this.status));
-
-					console.log(this.responseText && JSON.parse(this.responseText).error);
+                    showMessage(this);
 			}
 		});
 	};
@@ -377,7 +394,7 @@ document.getElementById("close").onclick = close;
 
         this.disabled = true;
 
-		top.postRequest(request, function () {
+		$.request.execute(request, function () {
 			switch (this.status) {
 				case 200:
                     alert("Notice.\n\n모니터 요청 정상.");
@@ -386,9 +403,7 @@ document.getElementById("close").onclick = close;
 					
                     break;
 				default:
-					alert(top.getMessage(this.status));
-
-					console.log(this.responseText && JSON.parse(this.responseText).error);
+                    showMessage(this);
 			}
 		});
 	};
@@ -402,10 +417,14 @@ document.getElementById("close").onclick = close;
         opener = this;
         nodeID = id;
 
-        thread.onmessage = e => {
-            switch(e.data.status) {
+        $.request.execute({
+                command: "get",
+                target: "setting",
+                key: "custom"
+            }, function () {
+            switch(this.status) {
             case 200:
-                const settingData = JSON.parse(e.data.responseText);
+                const settingData = JSON.parse(this.responseText);
 
                 if ("custom" in settingData) {
                     initCustom(settingData.custom.split(','));
@@ -415,29 +434,21 @@ document.getElementById("close").onclick = close;
                 
                 break;
             default:
-                alert(top.getMessage(e.data.status));
-
-                console.log(e.data.responseText && JSON.parse(e.data.responseText).error);
-            }
-        };
-
-        thread.postMessage({
-            action: "request",
-            request: {
-                command: "get",
-                target: "setting",
-                key: "custom"
+                showMessage(this);
             }
         });
     };
 
     function initProfile() {
-        thread.onmessage = e => {
-            switch(e.data.status) {
+        $.request.execute({
+            command: "get",
+            target: "profile"
+        }, function () {
+            switch(this.status) {
             case 200:
                 const
                     df = document.createDocumentFragment(),
-                    profileData = JSON.parse(e.data.responseText);
+                    profileData = JSON.parse(this.responseText);
 
                 for (let name in profileData) {
                     df.appendChild(document.createElement("option")).text = name;
@@ -449,28 +460,21 @@ document.getElementById("close").onclick = close;
 
                 break;
             default:
-                alert(top.getMessage(e.data.status));
-
-                console.log(e.data.responseText && JSON.parse(e.data.responseText).error);
-            }
-        };
-
-        thread.postMessage({
-            action: "request",
-            request: {
-                command: "get",
-                target: "profile"
+                showMessage(this);
             }
         });
     }
 
     function buildType() {
-        thread.onmessage = e => {
-            switch (e.data.status) {
+        $.request.execute({
+            command: "get",
+            target: "icon"
+        }, function () {
+            switch (this.status) {
             case 200:
                 const
                     iconData = ITAhM.iconData,
-                    customData = JSON.parse(e.data.responseText),
+                    customData = JSON.parse(this.responseText),
                     df = document.createDocumentFragment(),
                     group = {};
                 let 
@@ -511,27 +515,21 @@ document.getElementById("close").onclick = close;
                 break;
 
             default:
-                alert(top.getMessage(e.data.status));
-
-                console.log(e.data.responseText && JSON.parse(e.data.responseText).error);
-            }
-        };
-
-        thread.postMessage({
-            action: "request",
-            request: {
-                command: "get",
-                target: "icon"
-            }
+                showMessage(this);
+            };
         });
     }
 
     function initDialog() {
 		if (nodeID) {
-			thread.onmessage = e => {
-				switch (e.data.status) {
+            $.request.execute({
+                command: "get",
+                target: "node",
+                id: nodeID
+            }, function () {
+				switch (this.status) {
 				case 200:
-					window.node = JSON.parse(e.data.responseText);
+					window.node = JSON.parse(this.responseText);
 
 					if (!node.type) {
 						node.type = "unknown";
@@ -562,22 +560,11 @@ document.getElementById("close").onclick = close;
 					break;
 
 				default:
-					alert(top.getMessage(e.data.status));
-
-					console.log(e.data.responseText && JSON.parse(e.data.responseText).error);
+                    showMessage(this);
 				}
 
 				document.body.classList.remove("loading");
-			};
-
-            thread.postMessage({
-                action: "request",
-                request: {
-                    command: "get",
-                    target: "node",
-                    id: nodeID
-                }
-            });
+			});
 		}
 		else {
 			form.elements["type"].value = "unknown";

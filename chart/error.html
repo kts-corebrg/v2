@@ -289,7 +289,7 @@ function realtime(realtime) {
 }
 
 function postRealtimeRequest() {
-    top.postRequest({
+    $.request.execute({
         command: "get",
         target: "node",
         id: Number(window.sessionStorage.getItem("node_id")),
@@ -327,6 +327,21 @@ function toString(value) {
     return value.toFixed(0) +"cps"
 }
 
+function showMessage(xhr) {
+    switch (xhr.status) {
+    case 401:
+        alert("Notice!\n\n"+ "세션 만료.");
+
+        break;
+    default:
+        alert(`Error!\n\n오류코드 ${xhr.status}.`);
+    }
+
+    try {
+        console.log(JSON.parse(xhr.responseText).error);
+    } catch (e) {}
+}
+
 		</script>
 	</head>
 	
@@ -345,11 +360,16 @@ function toString(value) {
 		</header>
         <iframe id="chart_in"></iframe>
         <iframe id="chart_out"></iframe>
-		<script src="/js/ITAhM.js"></script>	
-		<script src="/js/object.js"></script>
+		<script src="/js/ITAhM.js"></script>
+        <script src="/js/object.js"></script>
+        <script src="/js/request.js"></script>
 		<script>
 
-const INTERVAL = 5000;
+const
+    $ = {
+        request: new Request()
+    },
+    INTERVAL = 5000;
 var timer;
 
 window.position = Number(window.sessionStorage.getItem("position"));
@@ -360,7 +380,6 @@ document.querySelector(".glyph").onclick = function (e) {
     e.preventDefault();
 
     const
-        thread = new Worker("/js/post_request.js"),
         request = {
             command: "set",
             target: "critical",
@@ -370,66 +389,52 @@ document.querySelector(".glyph").onclick = function (e) {
         },
         oid = [ITAhM.snmp.oid.ifInErrors, ITAhM.snmp.oid.ifOutErrors];
 
-    thread.onmessage = e => {
-        switch (e.data.status) {
+    function onResponse () {
+        switch (this.status) {
             case 200:
                 request.oid = oid.pop();
 
                 if (request.oid) {
-                    thread.postMessage([window.localStorage.getItem("agent"), request]);
+                    $.request.execute(request, onResponse);
                 } else {
                     alert("Information.\n\n임계를 설정했습니다.");
-
-                    thread.terminate();
                 }
                 
                 break;
 
             default:
-                thread.terminate();
-
-                alert("Error!\n\n오류 코드 "+ e.data.status);
-
-                console.log(e.data.textResponse && JSON.parse(e.data.textResponse).error);
+                showMessage(this);
         }
-    };
+    }
 
     request.oid = oid.pop();
 
-    thread.postMessage([window.localStorage.getItem("agent"), request]);
+    $.request.execute(request, onResponse);
 };
 
 function initCritical() {
-    const thread = new Worker("/js/post_request.js");
-
-    thread.onmessage = e => {
-        switch (e.data.status) {
+    $.request.execute({
+        command: "get",
+        target: "critical",
+        id: Number(window.sessionStorage.getItem("node_id")),
+        index: window.sessionStorage.getItem("index"),
+        oid: ITAhM.snmp.oid.ifInErrors
+    }, function () {
+        switch (this.status) {
             case 200:
-                document.getElementById("limit").value = JSON.parse(e.data.responseText).limit;
+                document.getElementById("limit").value = JSON.parse(this.responseText).limit;
                 
                 document.getElementById("chart_in").src="/chart/errorIn.html";
                 document.getElementById("chart_out").src="/chart/errorOut.html";
 
                 break;
             default:
-                alert("Error!\n\n오류 코드 "+ e.data.status);
-
-                console.log(e.data.textResponse && JSON.parse(e.data.textResponse).error);
+                showMessage(this);
         }
-
-        thread.terminate();
-    };
-
-    thread.postMessage([window.localStorage.getItem("agent"), {
-        command: "get",
-        target: "critical",
-        id: Number(window.sessionStorage.getItem("node_id")),
-        index: window.sessionStorage.getItem("index"),
-        oid: ITAhM.snmp.oid.ifInErrors
-    }]);
+    });
 }
 
-top.postRequest({
+$.request.execute({
     command: "get",
     target: "node",
     id: Number(window.sessionStorage.getItem("node_id")),
@@ -460,9 +465,7 @@ top.postRequest({
         
         break;
     default:
-        alert(top.getMessage(this.status));
-
-        console.log(this.responseText && JSON.parse(this.responseText).error);
+        showMessage(this);
     }
 });
 		</script>

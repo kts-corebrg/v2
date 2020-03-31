@@ -61,18 +61,18 @@ body {
         </style>
         <script>
         
-function showMessage(data) {
-    switch (data.status) {
+function showMessage(xhr) {
+    switch (xhr.status) {
     case 401:
-        alert("Notice.\n\n"+ "세션 만료.");
+        alert("Notice!\n\n"+ "세션 만료.");
 
         break;
     default:
-        alert("Error!\n\n"+ "오류코드: "+ data.status);
+        alert(`Error!\n\n오류코드 ${xhr.status}.`);
     }
 
     try {
-        console.log(JSON.parse(data.responseText).error);
+        console.log(JSON.parse(xhr.responseText).error);
     } catch (e) {}
 }
 
@@ -82,11 +82,12 @@ function showMessage(data) {
         <div id="map"></div>
         <div class="bg_loading"></div>
 
+        <script src="/js/request.js"></script>
         <script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=2d5f1506a806e98b9b51ecb765853bd7&libraries=services,clusterer,drawing"></script>
         <script>
 
 const $ = {
-        thread: new Worker("/js/thread.js"),
+        request: new Request(),
         overlayMap: {}
     };
 
@@ -100,11 +101,6 @@ try {
 
     throw "kakao.maps.Map exception";
 }
-
-$.thread.postMessage({
-    action: "initialize",
-    agent: window.localStorage.getItem("agent")
-});
 
 $.clusterer = new kakao.maps.MarkerClusterer({
     map: $.map, // 마커들을 클러스터로 관리하고 표시할 지도 객체 
@@ -158,18 +154,29 @@ function initialzie() {
     }
 
     parent.getNodeList("critical").forEach(id => {
-        $.overlayMap[id].setContent("<div class='status critical'></div>");
+        const overlay = $.overlayMap[id];
+
+        if (overlay) {
+            overlay.setContent("<div class='status critical'></div>");
+        }
     });
 
     parent.getNodeList("shutdown").forEach(id => {
-        $.overlayMap[id].setContent("<div class='status shutdown'></div>");
+        const overlay = $.overlayMap[id];
+
+        if (overlay) {
+            overlay.setContent("<div class='status shutdown'></div>");
+        }
     });
 }
 
-$.thread.onmessage = function (e) {
-    switch(e.data.status) {
+$.request.execute({
+    target: "branch",
+    command: "get"
+}, function () {
+    switch(this.status) {
     case 200:
-        $.branchData = JSON.parse(e.data.responseText);
+        $.branchData = JSON.parse(this.responseText);
 
         initialzie();
         
@@ -177,17 +184,10 @@ $.thread.onmessage = function (e) {
         
         break;
     default:
-        showMessage(e.data);
-    }
-};
-
-$.thread.postMessage({
-    action: "request",
-    request: {
-        target: "branch",
-        command: "get"
+        showMessage(this);
     }
 });
+
         </script>
         
     </body>

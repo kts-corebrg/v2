@@ -1091,12 +1091,12 @@ function setThroughput(index, speed, inOcts, outOcts, errors, critical) {
 }
 
 function refresh() {
-    window.thread.postMessage([window.localStorage.getItem("agent"), {
+    $.request.execute({
         command: "get",
         target: "node",
         id: Number(window.sessionStorage.getItem("node_id")),
         resource: true
-    }]);
+    }, onUpdate);
 }
 
 function update(node) {
@@ -1193,12 +1193,12 @@ function update(node) {
     }
 }
 
-function onUpdate(e) {
-    switch (e.data.status) {
-        case 200:
-            update(JSON.parse(e.data.responseText));
+function onUpdate() {
+    switch (this.status) {
+    case 200:
+        update(JSON.parse(this.responseText));
 
-            break;
+        break;
     }
 
     setTimeout(refresh, 10000);
@@ -1267,6 +1267,22 @@ function setDraggable() {
 		});
 	});
 }
+
+function showMessage(xhr) {
+    switch (xhr.status) {
+    case 401:
+        alert("Notice!\n\n"+ "세션 만료.");
+
+        break;
+    default:
+        alert(`Error!\n\n오류코드 ${xhr.status}.`);
+    }
+
+    try {
+        console.log(JSON.parse(xhr.responseText).error);
+    } catch (e) {}
+}
+
 		</script>
 	</head>
 
@@ -1434,10 +1450,15 @@ function setDraggable() {
 			</ul>
 		</div>
 	
-		<script src="js/ITAhM.js"></script>
-		<script src="js/snmp.js"></script>
-		<script type="text/javascript">
-	
+		<script src="/js/ITAhM.js"></script>
+        <script src="/js/snmp.js"></script>
+        <script src="/js/request.js"></script>
+		<script>
+
+const $ = {
+        request: new Request()
+    };
+
 var 
 	processorArea = document.getElementById("hr_processor_load"),
 	storageArea = document.getElementById("hr_storage_used"),
@@ -1465,15 +1486,11 @@ document.getElementById("frame_response").onload = function (e) {
         data: new this.contentWindow.RealtimeData()
     };
 
-    window.thread = new Worker("/js/post_request.js");
-
-    window.thread.onmessage = onUpdate;
-
     refresh();
 };
 
 if (window.sessionStorage.getItem("node_id")) {
-    top.postRequest({
+    $.request.execute({
         command: "get",
         target: "node",
 		id: Number(window.sessionStorage.getItem("node_id")),
@@ -1489,9 +1506,7 @@ if (window.sessionStorage.getItem("node_id")) {
 
 				break;
 			default:
-				alert(top.getMessage(this.status));
-
-				console.log(this.responseText && JSON.parse(this.responseText).error);
+				showMessage(this);
 		}
 	});	
 }

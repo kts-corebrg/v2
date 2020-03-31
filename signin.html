@@ -90,28 +90,26 @@ input[type=submit] {
 
 		<script>
 
-function onCancel(e) {
-	e.preventDefault();
-	
-	cancel();
-}
+function onSignIn() {
+    switch(this.status) {
+		case 200:
+			return top.signIn(JSON.parse(this.responseText));
+		case 401:
+            alert("Error!\n\n"+
+                "계정이 존재하지 않거나 비밀번호가 일치하지 않습니다.");
+			
+			document.getElementById("signin").elements["username"].select();
+			
+			break;
+		default:
+            alert(`Error!\n\n오류 코드${this.status}.`);
 
-function onSignIn(e) {
-	e.preventDefault();
-    
-    document.body.classList.add("loading");
+            try {
+                console.log(JSON.parse(this.responseText).error);
+            } catch (e) {}
+    }
 
-    window.thread.postMessage([window.agent, {
-            command: "signin",
-            username: this.elements["username"].value,
-            password: hex_md5(this.elements["password"].value)    
-        }]);
-}
-
-function cancel() {
-    window.localStorage.removeItem("agent");
-
-    window.location.replace("/connect.html");
+    document.body.classList.remove("loading");
 }
 
 		</script>
@@ -142,54 +140,33 @@ function cancel() {
             </form>
         </main>
         
-		
 		<div class="bg_loading"></div>
         
+        <script src="/js/request.js"></script>
         <script src="/js/md5.js"></script>
 		<script>
 
-var
-    thread = new Worker("/js/post_request.js"),
-    agent = window.localStorage.getItem("agent");
-
-if (!agent) {
-    window.location.replace("/connect.html");
-}
-
-document.getElementById("agent").textContent = agent;
-
-window.thread.onmessage = e => {
-    switch(e.data.status) {
-		case 200:
-			top.signIn(JSON.parse(e.data.responseText));
-			
-			break;
-		case 401:
-            alert("Error!\n\n"+
-                "계정이 존재하지 않거나 비밀번호가 일치하지 않습니다.");
-			
-			document.getElementById("signin").elements["username"].select();
-			
-			break;
-		case 503:
-            alert("Error!\n\n"+
-                "에이전트가 서비스를 준비하고 있습니다.");
-
-			break;
-		default:
-            alert("Error!\n\n"+
-                "에이전트가 응답하지 않습니다.\n\n"+
-                "상태: "+ e.data.status);
-			
-			cancel();
-    }
-
-    document.body.classList.remove("loading");
+const $ = {
+    request: new Request()
 };
 
-document.getElementById("signin").onsubmit = onSignIn;
-document.getElementById("signin").onreset = onCancel;
+document.getElementById("agent").textContent = $.request.agent;
 
+document.getElementById("signin").onsubmit = function (e) {
+	e.preventDefault();
+    
+    document.body.classList.add("loading");
+
+    $.request.signIn(this.elements["username"].value, hex_md5(this.elements["password"].value), onSignIn);
+};
+
+document.getElementById("signin").onreset = function (e) {
+	e.preventDefault();
+	
+	$.request.reset();
+
+    window.location.replace("/connect.html");
+};
 
 		</script>
 	

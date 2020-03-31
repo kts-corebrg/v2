@@ -6,6 +6,7 @@
 		
 		<style>
 @import "/css/style.css";
+@import "/css/fa.css";
 
 body {
 	margin: 0; padding: 0;
@@ -91,17 +92,15 @@ footer> input:hover {
 }
 
 #close {
-	font-size: 20px;
-	position: absolute; top: 5px; right: 5px;
-	border: 3px solid transparent;
+    font-family: "Font Awesome 5 Free";
+    display: block;
+    float: right;
+    font-weight: bold;
+    cursor: pointer;
 }
 
 #close:hover {
-	border-color: #c68e17;
-}
-
-#close::before, #close::after {
-	background-color: #c68e17;
+    transform: scale(1.2);
 }
 
 main {
@@ -139,14 +138,31 @@ function getByteLength(s) {
 	return length;
 }
 
+function showMessage(xhr) {
+    switch (xhr.status) {
+    case 401:
+        alert("Notice!\n\n"+ "세션 만료.");
+
+        break;
+    default:
+        alert(`Error!\n\n오류코드 ${xhr.status}.`);
+    }
+
+    try {
+        console.log(JSON.parse(xhr.responseText).error);
+    } catch (e) {}
+}
+
 		</script>
 	</head>
 	
 	<body class="loading">
 
 		<form autocomplete="off">
-			<i class="btn_close round" id="close"></i>
-            <h2>snmp profile</h2>
+            <h2>
+                <span  id="close" title="대화창 닫기">&#xf00d;</span>
+                snmp profile
+            </h2>
             <main>
                 <table>
                     <tr>
@@ -212,8 +228,14 @@ function getByteLength(s) {
                 </footer>
                 <div class="bg_loading"></div>
             </main>
-		</form>
+        </form>
+        
+        <script src="/js/request.js"></script>
 		<script>
+
+const $ = {
+        request: new Request()
+    };
 
 function close() {
 	top.closeDialog(true);
@@ -270,7 +292,7 @@ if (top.account.level === 0) {
         
         document.body.classList.add("loading");
 		
-		top.postRequest({
+		$.request.execute({
 			command: "remove",
 			target: "profile",
 			name: profileName
@@ -287,9 +309,7 @@ if (top.account.level === 0) {
 
 				break;
 			default:
-                alert("Error!\n\n오류 코드 "+ e.data.status);
-
-				console.log(this.responseText && JSON.parse(this.responseText).error);
+                showMessage(this);
 			}
 
 			document.body.classList.remove("loading");
@@ -369,7 +389,7 @@ if (top.account.level === 0) {
 
 		document.body.classList.add("loading");
 		
-		top.postRequest(request, function () {
+		$.request.execute(request, function () {
 			switch (this.status) {
 			case 200:
 				opener.location.reload();
@@ -382,9 +402,7 @@ if (top.account.level === 0) {
 
 				break;
 			default:
-				alert(top.getMessage(this.status));
-
-				console.log(this.responseText && JSON.parse(this.responseText).error);
+                showMessage(this);
 			}
 
 			document.body.classList.remove("loading");

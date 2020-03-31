@@ -111,15 +111,32 @@ footer> input:hover {
 }
 
 		</style>
+        <script>
 
+function showMessage(xhr) {
+    switch (xhr.status) {
+    case 401:
+        alert("Notice!\n\n"+ "세션 만료.");
+
+        break;
+    default:
+        alert(`Error!\n\n오류코드 ${xhr.status}.`);
+    }
+
+    try {
+        console.log(JSON.parse(xhr.responseText).error);
+    } catch (e) {}
+}
+
+        </script>
 	</head>
 	
 	<body class="loading">
 	
 		<form autocomplete="off">
 			<h2>
-                조치 사항
                 <span  id="close" title="대화창 닫기">&#xf00d;</span>
+                조치 사항
             </h2>
 			<div class="table">
 				<ul>
@@ -146,11 +163,13 @@ footer> input:hover {
 			</footer>
 			<div class="bg_loading"></div>
 		</form>
-		
+        
+        <script src="/js/request.js"></script>
 		<script>
 
 const $ = {
-    request: {
+    request: new Request(),
+    requestData: {
         target: "memo",
         command: "set"
     }
@@ -170,9 +189,9 @@ const $ = {
             value: form.elements["memo"].value
         };
 
-        $.request.memo = memo;
+        $.requestData.memo = memo;
 
-		top.postRequest($.request, function () {
+		$.request.execute($.requestData, function () {
 			switch (this.status) {
 			case 200:
 				opener && opener.closeDialog(memo);
@@ -181,9 +200,7 @@ const $ = {
 
 				break;
 			default:
-				alert(top.getMessage(this.status));
-
-				console.log(this.responseText && JSON.parse(this.responseText).error);
+				showMessage(this);
 			}
 
 			document.body.classList.remove("loading");
@@ -194,7 +211,7 @@ const $ = {
 	window.initialize = function (id, memo) {
 		opener = this;
 
-        $.request.event = id;
+        $.requestData.event = id;
 
 		if (memo) {
 			form.elements["username"].value = memo.username;

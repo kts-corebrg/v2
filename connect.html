@@ -80,7 +80,32 @@ body:not(.loading) .bg_loading {
     display: none;
 }
 
-		</style>
+        </style>
+        <script>
+
+function onConnect() {
+    switch (this.status) {
+    case 200:
+        try {
+            return top.signIn(JSON.parse(this.responseText));
+        }
+        catch(e) {
+            alert("Error!\n\n서비스가 비정상 종료 되었습니다.\n"+
+            "모든 브라우저를 닫고 다시 시작하십시오.");
+        }
+
+        break;
+    case 400:
+        return window.location.replace("/signin.html");
+    default:
+        try {
+            console.log(JSON.parse(this.responseText).error);
+        } catch (e) {}
+    }
+
+    document.body.classList.remove("ready");
+}
+        </script>
 	</head>
 	
 	<body class="ready" lang="ko">
@@ -104,100 +129,75 @@ body:not(.loading) .bg_loading {
 		
 		<div class="bg_loading"></div>
 
-		<script>
+		<script src="/js/request.js"></script>
+        <script>
 
-var
-    thread = new Worker("/js/thread.js"),
-    agent = window.localStorage.getItem("agent");
+const $ = {
+    request: new Request()
+};
 
-window.thread.onmessage = e => {
-    switch(e.data.status) {
-        case 200:
-            window.localStorage.setItem("agent", agent);
-
-            try {
-                top.signIn(JSON.parse(e.data.responseText));
-            }
-            catch(e) {
-                alert("Error!\n\n서비스가 비정상 종료 되었습니다.\n"+
-                "모든 브라우저를 닫고 다시 시작하십시오.");
-
-                document.body.classList.remove("ready");
-            }
-
-            break;
-        
-        case 400:
-            window.localStorage.setItem("agent", agent);
-
-           window.location.replace("/signin.html");
-            
-            break;
-        case 503:
-            window.localStorage.setItem("agent", agent);
-
-            alert("Error!\n\n"+
-                "에이전트가 서비스를 준비하고 있습니다.");
-            
-            document.body.classList.remove("ready");
-
-            break;
-        case -1:
-            console.trace(e.data.exception);
-        default:
-            if (window.localStorage.getItem("agent")) {
-                window.localStorage.removeItem("agent");
-            } else {
-                alert("Error!\n\n"+
-                    "에이전트가 응답하지 않습니다.\n"+
-                    "오류코드 "+ e.data.status);
-            }
-
-            document.body.classList.remove("ready");
-    }
-
-    document.body.classList.remove("loading");
-}
-
-if (agent) {
-    const
-        form = document.getElementById("connect"),
-        ar = agent.split("//")[1].split(":");
-
-    form.elements["ip"].value = ar[0];
-    form.elements["tcp"].value = ar[1];
-
-    trySignIn(agent);
-}
-else {
+{
     const form = document.getElementById("connect");
-    
-    document.body.classList.remove("ready");
 
     form.onsubmit = function (e) {
         e.preventDefault();
         
         document.body.classList.add("loading");
 
-        agent = window.location.protocol +"//"+ this.elements["ip"].value +":" +this.elements["tcp"].value;
+        const agent = `${window.location.protocol}//${this.elements["ip"].value}:${this.elements["tcp"].value}`;
 
-        trySignIn(agent);
+        $.request.connect(agent, function () {
+            switch (this.status) {
+            case 200:
+                try {
+                    return top.signIn(JSON.parse(this.responseText));
+                }
+                catch(e) {
+                    alert("Error!\n\n서비스가 비정상 종료 되었습니다.\n"+
+                    "모든 브라우저를 닫고 다시 시작하십시오.");
+                }
+
+                break;
+            case 400:
+                return window.location.replace("/signin.html");
+            default:
+                alert(`Error!\n\n${agent} 연결 오류.\n오류 코드 ${this.status}.`);
+
+                try {
+                    console.log(JSON.parse(this.responseText).error);
+                } catch (e) {}
+            }
+
+            document.body.classList.remove("loading");
+        });
     };
 }
 
-function trySignIn(agent) {
-    window.thread.postMessage({
-        action: "initialize",
-        agent: agent
-    });
-
-    window.thread.postMessage({
-        action: "request",
-        request: {
-            command: "signin"
+if (!$.request.try(function () {
+    switch (this.status) {
+    case 200:
+        try {
+            return top.signIn(JSON.parse(this.responseText));
         }
-    });
+        catch(e) {
+            alert("Error!\n\n서비스가 비정상 종료 되었습니다.\n"+
+            "모든 브라우저를 닫고 다시 시작하십시오.");
+        }
+
+        break;
+    case 400:
+        return window.location.replace("/signin.html");
+    default:
+        try {
+            console.log(JSON.parse(this.responseText).error);
+        } catch (e) {}
+    }
+
+    document.body.classList.remove("ready");
+})) {
+    document.body.classList.remove("ready");
 }
+
 		</script>
 	
 	</body>

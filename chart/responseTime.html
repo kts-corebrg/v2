@@ -339,7 +339,7 @@ function realtime(realtime) {
 }
 
 function postRealtimeRequest(realtimeData) {
-    top.postRequest({
+    $.request.execute({
         command: "get",
         target: "node",
         id: Number(window.sessionStorage.getItem("node_id")),
@@ -357,7 +357,7 @@ function postRealtimeRequest(realtimeData) {
 
             break;
         default:
-            console.log(this.responseText && JSON.parse(this.responseText).error);
+            showMessage(this);
         }
 
         if (window.setRealtime) {
@@ -369,7 +369,22 @@ function postRealtimeRequest(realtimeData) {
 function toString(value) {
     return value.toFixed(0) +"ms"
 }
-		
+
+function showMessage(xhr) {
+    switch (xhr.status) {
+    case 401:
+        alert("Notice!\n\n"+ "세션 만료.");
+
+        break;
+    default:
+        alert(`Error!\n\n오류코드 ${xhr.status}.`);
+    }
+
+    try {
+        console.log(JSON.parse(xhr.responseText).error);
+    } catch (e) {}
+}
+
 		</script>
 	</head>
 	
@@ -394,10 +409,16 @@ function toString(value) {
             <div class="bg_loading"></div>
         </div>
 		<script src="/js/ITAhM.js"></script>	
-		<script src="/js/object.js"></script>
+        <script src="/js/object.js"></script>
+        <script src="/js/request.js"></script>
 		<script>
 
-const INTERVAL = 5000;
+const
+    $ = {
+        request: new Request()
+    },
+    INTERVAL = 5000;
+    
 var setRealtime = false;
 
 document.getElementById("realtime").onload = function (e) {
@@ -416,32 +437,23 @@ document.querySelector("form.critical").onsubmit =
 document.querySelector(".glyph").onclick = function (e) {
     e.preventDefault();
 
-    const thread = new Worker("/js/post_request.js");
-
-    thread.onmessage = e => {
-        switch (e.data.status) {
-            case 200:
-                alert("Information.\n\n임계를 설정했습니다.");
-
-            break;
-
-            default:
-                alert("Error!\n\n오류 코드 "+ e.data.status);
-
-                console.log(e.data.textResponse && JSON.parse(e.data.textResponse).error);
-        }
-
-        thread.terminate();
-    };
-
-    thread.postMessage([window.localStorage.getItem("agent"), {
+    $.request.execute({
         command: "set",
         target: "critical",
         id: Number(window.sessionStorage.getItem("node_id")),
         index: window.sessionStorage.getItem("index"),
         oid: ITAhM.snmp.oid.responseTime,
         limit: Number(document.getElementById("limit").value || "0")
-    }]);
+    }, function () {
+        switch (this.status) {
+        case 200:
+            alert("Information.\n\n임계를 설정했습니다.");
+
+            break;
+        default:
+            showMessage(this);
+        }
+    });
 };
 
 (chartFrame => {
@@ -472,7 +484,7 @@ document.querySelector(".glyph").onclick = function (e) {
         const date = dateArray.pop();
 
         if (date) {
-            top.postRequest({
+            $.request.execute({
                 command: "get",
                 target: "resource",
                 id: Number(window.sessionStorage.getItem("node_id")),
@@ -524,7 +536,7 @@ document.querySelector(".glyph").onclick = function (e) {
     }
 
     function initTimeout() {
-        top.postRequest({
+        $.request.execute({
             command: "get",
             target: "config"
         }, function () {
@@ -536,43 +548,34 @@ document.querySelector(".glyph").onclick = function (e) {
 
                 document.getElementById("max").textContent = max;
                 document.getElementById("limit").setAttribute("max", max);
+
                 initialize();
                 
                 break;
             default:
-                alert(top.getMessage(this.status));
-
-                console.log(this.responseText && JSON.parse(this.responseText).error);
+                showMessage(this);
             }
         });
     }
 
-    const thread = new Worker("/js/post_request.js");
-
-    thread.onmessage = e => {
-        switch (e.data.status) {
-            case 200:
-                document.getElementById("limit").value = JSON.parse(e.data.responseText).limit;
-                
-                initTimeout();
-
-                break;
-            default:
-                alert("Error!\n\n오류 코드 "+ e.data.status);
-
-                console.log(e.data.textResponse && JSON.parse(e.data.textResponse).error);
-        }
-
-        thread.terminate();
-    };
-
-    thread.postMessage([window.localStorage.getItem("agent"), {
+    $.request.execute({
         command: "get",
         target: "critical",
         id: Number(window.sessionStorage.getItem("node_id")),
         index: window.sessionStorage.getItem("index"),
         oid: ITAhM.snmp.oid.responseTime
-    }]);
+    }, function () {
+        switch (this.status) {
+        case 200:
+            document.getElementById("limit").value = JSON.parse(this.responseText).limit;
+            
+            initTimeout();
+
+            break;
+        default:
+            showMessage(this);
+        }
+    });
 })(document.getElementById("chart"));
 		</script>
 	

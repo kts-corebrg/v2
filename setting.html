@@ -265,18 +265,18 @@ function createItem(src, key, data, func) {
 	return li;
 }
 
-function showMessage(data) {
-    switch (data.status) {
+function showMessage(xhr) {
+    switch (xhr.status) {
     case 401:
-        alert("Notice.\n\n"+ "세션 만료.");
+        alert("Notice!\n\n"+ "세션 만료.");
 
         break;
     default:
-        alert("Error!\n\n"+ "오류코드: "+ data.status);
+        alert(`Error!\n\n오류코드: ${xhr.status}.`);
     }
 
     try {
-        console.log(JSON.parse(data.responseText).error);
+        console.log(JSON.parse(xhr.responseText).error);
     } catch (e) {}
 }
 
@@ -285,7 +285,9 @@ function showMessage(data) {
 	
 	<body>
 		<h2>
-			<img width="24px" height="24px" src="/img/information.png" class="logo">
+			<span class="logo">
+                &#xf05a;
+            </span>
 			정보
 		</h2>
 		<div id="information" class="box container loading">
@@ -313,7 +315,9 @@ function showMessage(data) {
 			<div class="bg_loading"></div>
 		</div>
 		<h2>
-			<img width="24px" height="24px" src="/img/run.png" class="logo">
+			<span class="logo">
+                &#xf013;
+            </span>
 			동작
 		</h2>
 		<div id="common" class="box container loading">
@@ -332,7 +336,7 @@ function showMessage(data) {
 			</p>
             <p>
 				<form id="timeout">
-					Ping Timeout(초): <input type="submit" value="적용" class="root">
+					Ping Timeout(초):
                     <select name="timeout">
                         <option value="1000">1
                         <option value="2000">2
@@ -340,16 +344,18 @@ function showMessage(data) {
                         <option value="5000">5
                         <option value="10000" selected>10
                     </select>
+                    <input type="submit" value="적용" class="root">
                 </form>
 			</p>
             <p>
 				<form id="retry">
-					Ping Retry(초): <input type="submit" value="적용" class="root">
+					Ping Retry(초):
                     <select name="retry">
                         <option value="0" selected>0
                         <option value="1">1
                         <option value="2">2
                     </select>
+                    <input type="submit" value="적용" class="root">
                 </form>
 			</p>
 			<p>
@@ -377,7 +383,9 @@ function showMessage(data) {
 			<div class="bg_loading"></div>
 		</div>
 		<h2>
-			<img width="24px" height="24px" src="/img/ui.png" class="logo">
+			<span class="logo">
+                &#xf458;
+            </span>
 			UI
 		</h2>
 		<div id="setting" class="container box loading">
@@ -434,7 +442,9 @@ function showMessage(data) {
 		
 		<form id="account" class="container loading">
 			<h2>
-				<img width="24px" height="24px" src="/img/account.png" class="logo">
+				<span class="logo">
+                    &#xf500;
+                </span>
 				계정
 				<input class="button root" type="submit" value="+" title="계정 추가">
 			</h2>
@@ -446,7 +456,9 @@ function showMessage(data) {
 		
 		<form id="profile" class="container loading">
 			<h2>
-				<img width="24px" height="24px" src="/img/profile.png" class="logo">
+				<span class="logo">
+                    &#xf2bb;
+                </span>
 				SNMP 프로파일
 				<input class="button root" type="submit" value="+" title="프로파일 추가">
 			</h2>
@@ -459,7 +471,9 @@ function showMessage(data) {
 		
 		<form id="event" class="container loading disabled">
 			<h2>
-				<img width="24px" height="24px" src="/img/send_mail.png" class="logo">
+				<span class="logo">
+                    &#xf658;
+                </span>
                 <label class="switch root" title="이벤트 통지 활성화">
                     <input type="checkbox" id="snmp_enable">
                     <span class="slider"></span>
@@ -514,7 +528,9 @@ function showMessage(data) {
 			<div class="bg_loading"></div>
         </form>
 		<h2>
-            <img width="24px" height="24px" src="/img/backup.png" class="logo">
+            <span class="logo">
+                &#xf1da;
+            </span>
             백업
         </h2>
         <form class="box root" id="backup">
@@ -529,17 +545,15 @@ function showMessage(data) {
         <form class="box root" id="stop">
             <input type=submit value="서비스 중지">
         </form>
-		<script src="js/ITAhM.js"></script>
-		<script src="js/object.js"></script>
-		<script src="js/md5.js"></script>
+		<script src="/js/ITAhM.js"></script>
+		<script src="/js/object.js"></script>
+        <script src="/js/md5.js"></script>
+        <script src="/js/request.js"></script>
 		<script>
 
-var thread = new Worker("/js/thread.js");
-
-thread.postMessage({
-    action: "initialize",
-    agent: window.localStorage.getItem("agent")
-});
+const $ = {
+    request: new Request()
+};
 
 if (top.account.level > 0) {
 	[].forEach.call(document.querySelectorAll(".root"),
@@ -549,40 +563,37 @@ if (top.account.level > 0) {
 } else {
     document.body.classList.add("root");
 }
+    
+function initInformation() {
+    switch (this.status) {
+        case 200:
+            const information = JSON.parse(this.responseText);
 
-(function(container) {
-	top.postRequest({
-		command: "get",
-        target: "information"
-	}, function () {
-		switch (this.status) {
-			case 200:
-				const information = JSON.parse(this.responseText);
+            document.getElementById("java").textContent = information.java;
+            document.getElementById("version").textContent = information.version;
+            document.getElementById("resource").textContent = information.resource;
+            document.getElementById("max_conn").textContent = information.maxConnection;
+            document.getElementById("usage").textContent
+                = information.usage && ITAhM.util.toBytesString(information.usage) || "제공하지 않음.";
+            document.getElementById("space").textContent = ITAhM.util.toBytesString(information.space);
+            document.getElementById("path").textContent = information.path;
+            document.getElementById("expire").textContent
+                = information.expire > 0? new Date(information.expire).toLocaleString(): "";
 
-				document.getElementById("java").textContent = information.java;
-				document.getElementById("version").textContent = information.version;
-				document.getElementById("resource").textContent = information.resource;
-                document.getElementById("max_conn").textContent = information.maxConnection;
-				document.getElementById("usage").textContent
-                    = information.usage && ITAhM.util.toBytesString(information.usage) || "제공하지 않음.";
-				document.getElementById("space").textContent = ITAhM.util.toBytesString(information.space);
-				document.getElementById("path").textContent = information.path;
-				document.getElementById("expire").textContent
-					= information.expire > 0? new Date(information.expire).toLocaleString(): "";
+            document.getElementById("information").classList.remove("loading");	
 
-				container.classList.remove("loading");	
-
-				break;
-			default:
-				alert(top.getMessage(this.status));
-
-				console.log(this.responseText && JSON.parse(this.responseText).error);
-		}
-	});
-}) (document.getElementById("information"));
+            $.request.execute({
+                command: "get",
+                target: "config"
+            }, initConfig);
+    
+            break;
+        default:
+            showMessage(this);
+    }
+}
 
 (function (container) {
-	
 	container.elements["add"].onclick = function () {
 		top.showDialog.call(window, "/dialog/user.html");
 	};
@@ -593,10 +604,12 @@ if (top.account.level > 0) {
 
             container.querySelector("[type=submit").click();
         } else {
-            const thread = new Worker("/js/post_request.js");
-
-            thread.onmessage = function (e) {
-                switch (e.data.status) {
+            $.request.execute({
+                command: "set",
+                target: "config",
+                key: "smtpServer"
+            }, function (e) {
+                switch (this.status) {
                     case 200:
                         container.classList.add("disabled");
 
@@ -604,39 +617,18 @@ if (top.account.level > 0) {
 
                         break;
                     default:
-                        alert("Error!\n\n오류코드 "+ e.data.status);
+                        alert("Error!\n\n오류코드 "+ this.status);
 
-                        console.log(e.data.responseText && JSON.parse(e.data.responseText).error);
+                        console.log(this.responseText && JSON.parse(this.responseText).error);
                 }
-            }
-
-            thread.postMessage([window.localStorage.getItem("agent"), {
-                command: "set",
-                target: "config",
-                key: "smtpServer"
-            }]);
+            });
         }
     }
 
     container.onsubmit = function (e) {
         e.preventDefault();
 
-        const thread = new Worker("/js/post_request.js");
-
-        thread.onmessage = function (e) {
-            switch (e.data.status) {
-                case 200:
-                    alert("Information.\n\n이벤트 메일 통지 활성화 요청 성공.");
-
-                    break;
-                default:
-                    alert("Error!\n\n오류코드 "+ e.data.status);
-
-                    console.log(e.data.responseText && JSON.parse(e.data.responseText).error);
-            }
-        }
-
-        thread.postMessage([window.localStorage.getItem("agent"), {
+        $.request.execute({
             command: "set",
             target: "config",
             key: "smtpServer",
@@ -646,7 +638,16 @@ if (top.account.level > 0) {
                 password: container.elements["password"].value,
                 protocol: container.elements["protocol"].value
             }
-        }]);
+        }, function (e) {
+            switch (this.status) {
+                case 200:
+                    alert("Information.\n\n이벤트 메일 통지 활성화 요청 성공.");
+
+                    break;
+                default:
+                    showMessage(this);
+            }
+        });
     }
 
 	function onSelectUser(name, user) {
@@ -662,47 +663,42 @@ if (top.account.level > 0) {
         if (document.getElementById("snmp_enable").checked = config.smtpEnable) {
             container.classList.remove("disabled");
         }
-        
-        const thread = new Worker("/js/post_request.js");
+    };
 
-        thread.onmessage = function (e) {
-            switch (e.data.status) {
-                case 200:
-                    const
-                        userData = JSON.parse(e.data.responseText),
-                        df = document.createDocumentFragment();
+    window.initUser = function () {
+        switch (this.status) {
+            case 200:
+                const
+                    userData = JSON.parse(this.responseText),
+                    df = document.createDocumentFragment();
 
-                    for (let name in userData) {
-                        df.appendChild(createItem("/img/email.png", name, userData[name], onSelectUser));
-                    }
+                for (let name in userData) {
+                    df.appendChild(createItem("/img/email.png", name, userData[name], onSelectUser));
+                }
 
-                    document.getElementById("user_list").appendChild(df);
+                document.getElementById("user_list").appendChild(df);
 
-                    container.classList.remove("loading");
+                container.classList.remove("loading");
 
-                    break;
-                default:
-                    alert("Error!\n\n오류코드 "+ e.data.status);
+                $.request.execute({
+                    command: "get",
+                    target: "setting"
+                }, initSetting);
 
-                    console.log(e.data.responseText && JSON.parse(e.data.responseText).error);
-            }
+                break;
+            default:
+                showMessage(this);
         }
-
-        thread.postMessage([window.localStorage.getItem("agent"), {
-            command: "get",
-            target: "user"
-        }]);
     };
 }) (document.getElementById("event"));
 
 (function(container) {
-
 	document.getElementById("timeout").onsubmit = function (e) {
 		e.preventDefault();
 		
 		container.classList.add("loading");
 		
-		top.postRequest({
+		$.request.execute({
             command: "set",
             target: "config",
 			key: "timeout",
@@ -718,9 +714,7 @@ if (top.account.level > 0) {
 				
 				break;
 			default:
-				alert(top.getMessage(this.status));
-
-				console.log(this.responseText && JSON.parse(this.responseText).error);
+				showMessage(this);
 			}
 			
 			container.classList.remove("loading");
@@ -732,7 +726,7 @@ if (top.account.level > 0) {
 		
 		container.classList.add("loading");
 		
-		top.postRequest({
+		$.request.execute({
             command: "set",
             target: "config",
 			key: "retry",
@@ -748,9 +742,7 @@ if (top.account.level > 0) {
 				
 				break;
 			default:
-				alert(top.getMessage(this.status));
-
-				console.log(this.responseText && JSON.parse(this.responseText).error);
+				showMessage(this);
 			}
 			
 			container.classList.remove("loading");
@@ -762,7 +754,7 @@ if (top.account.level > 0) {
 		
 		container.classList.add("loading");
 		
-		top.postRequest({
+		$.request.execute({
 			command: "set",
             target: "config",
 			key: "requestInterval",
@@ -774,9 +766,7 @@ if (top.account.level > 0) {
 				
 				break;
 			default:
-				alert(top.getMessage(this.status));
-
-				console.log(this.responseText && JSON.parse(this.responseText).error);
+				showMessage(this);
 			}
 			
 			container.classList.remove("loading");
@@ -788,7 +778,7 @@ if (top.account.level > 0) {
 
 		window.common.classList.add("loading");
 
-		top.postRequest({
+		$.request.execute({
 			command: "set",
             target: "config",
 			key: "storeDate",
@@ -800,9 +790,7 @@ if (top.account.level > 0) {
 
 				break;
 			default:
-				alert(top.getMessage(this.status));
-
-				console.log(this.responseText && JSON.parse(this.responseText).error);
+                showMessage(this);
 			}
 
 			container.classList.remove("loading");
@@ -814,7 +802,7 @@ if (top.account.level > 0) {
 
 		container.classList.add("loading");
 		
-		top.postRequest({
+		$.request.execute({
 			command: "set",
             target: "config",
 			key: "saveInterval",
@@ -826,19 +814,14 @@ if (top.account.level > 0) {
 				
 				break;
 			default:
-				alert(top.getMessage(this.status));
-
-				console.log(this.responseText && JSON.parse(this.responseText).error);
+                showMessage(this);
 			}
 
 			container.classList.remove("loading");
 		});
 	};
-
-	top.postRequest({
-		command: "get",
-		target: "config"
-	}, function () {
+    
+    window.initConfig = function () {
 		switch (this.status) {
 			case 200:
 				const config = JSON.parse(this.responseText);
@@ -853,13 +836,16 @@ if (top.account.level > 0) {
 
 				container.classList.remove("loading");
 
+                $.request.execute({
+                    command: "get",
+                    target: "user"
+                }, initUser);
+
 				break;
 			default:
-				alert(top.getMessage(this.status));
-
-				console.log(this.responseText && JSON.parse(this.responseText).error);
+                showMessage(this);
 		}
-	});
+    }
 }) (document.getElementById("common"));
 
 (function (container) {
@@ -878,7 +864,7 @@ if (top.account.level > 0) {
 
 		container.classList.add("loading");
 
-		top.postRequest(request, function () {
+        $.request.execute(request , function () {
 			switch(this.status) {
 			case 200:
 		        settingData[key] = value;
@@ -889,9 +875,7 @@ if (top.account.level > 0) {
 				
 				break;
 			default:
-				alert(top.getMessage(this.status));
-
-				console.log(this.responseText && JSON.parse(this.responseText).error);
+                showMessage(this);
 			}
 
 			container.classList.remove("loading");
@@ -948,10 +932,7 @@ if (top.account.level > 0) {
 		postRequest("linkSize", Math.max(this.elements["size"].value, 0).toString());
 	};
 
-    top.postRequest({
-        command: "get",
-        target: "setting"
-    }, function () {
+    window.initSetting = function () {
         switch (this.status) {
             case 200:
                 settingData = JSON.parse(this.responseText);
@@ -981,16 +962,19 @@ if (top.account.level > 0) {
                 if ("linkSize" in settingData) {
                     document.getElementById("link_size").querySelector("[name=size]").value = settingData.linkSize;
                 }
+
                 container.classList.remove("loading");
 
+                $.request.execute({
+                    command: "get",
+                    target: "account",
+                }, initAccount);
+    
                 break;
             default:
-                alert("Error!\n\n"+
-                    "설정을 불러올 수 없습니다.");
-
-                console.log(this.responseText && JSON.parse(this.responseText).error);
+                showMessage(this);
         }
-    });
+    };
 
 }) (document.getElementById("setting"));
 
@@ -1004,11 +988,8 @@ if (top.account.level > 0) {
 	function onSelectAccount(name, account) {
 		top.showDialog.call(window, "/dialog/account.html", name, account);
 	}
-	
-	top.postRequest({
-		command: "get",
-		target: "account",
-	}, function () {
+    
+    window.initAccount = function () {
 		switch (this.status) {
 		case 200:
 			const
@@ -1023,17 +1004,19 @@ if (top.account.level > 0) {
 			}
 
 			document.getElementById("account_list").appendChild(df);
-	
+    
+            container.classList.remove("loading");
+
+            $.request.execute({
+                command: "get",
+                target: "profile"
+            }, initProfile);
+            
 			break;
 		default:
-			alert(top.getMessage(this.status));
-
-			console.log(this.responseText && JSON.parse(this.responseText).error);
+			showMessage(this);
 		}
-
-		container.classList.remove("loading");
-	});
-
+    };
 }) (document.getElementById("account"));
 
 (function (container) {
@@ -1047,10 +1030,7 @@ if (top.account.level > 0) {
 		top.showDialog.call(window, "/dialog/profile.html", name, profile);
 	}
 
-	top.postRequest({
-		command: "get",
-		target: "profile"
-	}, function () {
+    window.initProfile = function () {
 		switch (this.status) {
 			case 200:
 				const
@@ -1067,11 +1047,9 @@ if (top.account.level > 0) {
 
 				break;
 			default:
-				alert(top.getMessage(this.status));
-
-				console.log(this.responseText && JSON.parse(this.responseText).error);
+                showMessage(this);
 		}
-	});
+    };
 }) (document.getElementById("profile"));
 
 (function(form) {
@@ -1080,8 +1058,12 @@ if (top.account.level > 0) {
     
         document.body.classList.add("loading");
 
-        window.thread.onmessage = e => {
-            switch (e.data.status) {
+        $.request.execute({
+            command: "backup",
+            service: "nms"
+        }
+        , function () {
+            switch (this.status) {
             case 200:
                 alert("Information.\n\n"+
                     "백업 정상.");
@@ -1091,19 +1073,11 @@ if (top.account.level > 0) {
                 break;
             default:
                 alert("Error!\n\n"+
-                    "오류코드: "+ e.data.status);
+                    "오류코드: "+ this.status);
                 
                 try {
-                    console.log(JSON.parse(e.data.responseText).error);
+                    console.log(JSON.parse(this.responseText).error);
                 } catch (e) {}
-            }
-        };
-
-        window.thread.postMessage({
-            action: "request",
-            request: {
-                command: "backup",
-                service: "nms"
             }
         });
 	};
@@ -1115,26 +1089,27 @@ if (top.account.level > 0) {
     
         document.body.classList.add("loading");
 
-        window.thread.onmessage = e => {
-            switch (e.data.status) {
+        $.request.execute({
+                command: "stop",
+                service: "nms"
+            }, function () {
+            switch (this.status) {
             case 200:
                 top.location.replace("/service.html");
 
                 break;
             default:
-                showMessage(e.data);
-            }
-        };
-
-        window.thread.postMessage({
-            action: "request",
-            request: {
-                command: "stop",
-                service: "nms"
+                showMessage(this);
             }
         });
 	};
 }) (document.getElementById("stop"));
+
+$.request.execute({
+    command: "get",
+    target: "information"
+}, initInformation);
+
 		</script>
 	
 	</body>

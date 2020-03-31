@@ -677,7 +677,7 @@ function onLink(e) {
         nodeFrom = Math.min (Number(this.dataset.id), e.detail.peer),
         nodeTo = Math.max (Number(this.dataset.id), e.detail.peer);
     
-    top.postRequest({
+    $.request.execute({
         command: "get",
         target: "path",
         nodeFrom: nodeFrom,
@@ -693,9 +693,7 @@ function onLink(e) {
 
             break;
 		default:
-			alert(top.getMessage(this.status));
-
-			console.log(this.responseText && JSON.parse(this.responseText).error);
+            showMessage(this);
 		}
     });
 }
@@ -720,6 +718,21 @@ function onEvent(e) {
 	
 		alert("Notice.\n\n새로운 노드가 탐지되었습니다.");
 	}
+}
+
+function showMessage(xhr) {
+    switch (xhr.status) {
+    case 401:
+        alert("Notice!\n\n"+ "세션 만료.");
+
+        break;
+    default:
+        alert(`Error!\n\n오류코드 ${xhr.status}.`);
+    }
+
+    try {
+        console.log(JSON.parse(xhr.responseText).error);
+    } catch (e) {}
 }
 
 		</script>
@@ -801,12 +814,13 @@ function onEvent(e) {
 
         <script src="/js/ITAhM.js"></script>
         <script src="/js/icon.js"></script>
+        <script src="/js/request.js"></script>
 		<script src="/js/Draggable.js"></script>
 		<script>
 		
 const
     $ = {
-        thread: new Worker("/js/thread.js")
+        request: new Request()
     },
 	SVG_NS = "http://www.w3.org/2000/svg",
 	XLINK_NS = "http://www.w3.org/1999/xlink",
@@ -833,11 +847,6 @@ var
     nodeData, pathData, linkData,
     iconData = ITAhM.iconData,
 	isDragging = false;
-
-$.thread.postMessage({
-    action: "initialize",
-    agent: window.localStorage.getItem("agent")
-});
 
 if (top.account.level === 0) {
 	document.body.classList.add("root");
@@ -1117,101 +1126,77 @@ document.getElementById("add_node").onclick = e => top.showDialog.call(window, "
 document.getElementById("add_group").onclick = e => top.showDialog.call(window, "/dialog/group.html");
 
 function initNode(e) {
-    switch(e.data.status) {
+    switch(this.status) {
         case 200:
-            window.nodeData = JSON.parse(e.data.responseText);
+            window.nodeData = JSON.parse(this.responseText);
             
-            $.thread.onmessage = initPath;
-
-            $.thread.postMessage({action: "request", request: {
+            $.request.execute({
                 command: "get",
                 target: "path"
-            }});
+            }, initPath);
 
             break;
-        case -1:
-            console.trace(e.data.exception);
         default:
-            alert(top.getMessage(this.status));
-
-            console.log(this.responseText && JSON.parse(this.responseText).error);
+            showMessage(this);
     }
 }
 
 function initPath(e) {
-    switch(e.data.status) {
+    switch(this.status) {
         case 200:
-            window.pathData = JSON.parse(e.data.responseText);
+            window.pathData = JSON.parse(this.responseText);
             
-            $.thread.onmessage = initLink;
-            
-            $.thread.postMessage({action: "request", request: {
+            $.request.execute({
                 command: "get",
                 target: "link"
-            }});
+            }, initLink);
             
             break;
-        case -1:
-            console.trace(e.data.exception);
         default:
-            alert(top.getMessage(this.status));
-
-            console.log(this.responseText && JSON.parse(this.responseText).error);
+            showMessage(this);
     }
 }
 
 function initLink(e) {
-    switch(e.data.status) {
+    switch(this.status) {
         case 200:
-            window.linkData = JSON.parse(e.data.responseText);
+            window.linkData = JSON.parse(this.responseText);
             
-            $.thread.onmessage = initIcon;
-            
-            $.thread.postMessage({action: "request", request: {
+            $.request.execute({
                 command: "get",
                 target: "icon"
-            }});
+            }, initIcon);
         
             break;
-        case -1:
-            console.trace(e.data.exception);
         default:
-            alert(top.getMessage(this.status));
-
-            console.log(this.responseText && JSON.parse(this.responseText).error);
+            showMessage(this);
     }
 }
 
 function initIcon(e) {
-    switch(e.data.status) {
+    switch(this.status) {
         case 200:
-            const iconData = JSON.parse(e.data.responseText);
+            const iconData = JSON.parse(this.responseText);
 
             for (let type in iconData) {
                 window.iconData[type] = iconData[type];
             }
 
-            $.thread.onmessage = initSetting;
-            
-            $.thread.postMessage({action: "request", request: {
+            $.request.execute({
                 command: "get",
                 target: "setting"
-            }});
+            }, initSetting);
 
             break;
-        case -1:
-            console.trace(e.data.exception);
         default:
-            alert(top.getMessage(this.status));
-
-            console.log(this.responseText && JSON.parse(this.responseText).error);
+            showMessage(this);
     }
 }
 
 function initSetting(e) {
-    switch(e.data.status) {
+    switch(this.status) {
         case 200:
-            const settingData = JSON.parse(e.data.responseText);
+            const settingData = JSON.parse(this.responseText);
 
             if ("display" in settingData) {
                 document.body.classList["display" in settingData && settingData.display === "name"? "add": "remove"]("name");
@@ -1228,21 +1213,15 @@ function initSetting(e) {
             initialize();
             
             break;
-        case -1:
-            console.trace(e.data.exception);
         default:
-            alert(top.getMessage(this.status));
-
-            console.log(this.responseText && JSON.parse(this.responseText).error);
+            showMessage(this);
     }
 }
 
-$.thread.onmessage = initNode;
-
-$.thread.postMessage({action: "request", request: {
+$.request.execute({
     command: "get",
     target: "node"
-}});
+}, initNode);
 
 		</script>
 	

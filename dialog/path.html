@@ -7,7 +7,7 @@
 		
 		<style>
 @import "/css/style.css";
-@import "/css/dialog.css";
+@import "/css/fa.css";
 
 body {
 	margin: 0; padding: 0;
@@ -60,17 +60,15 @@ footer input:hover {
 }
 
 #close {
-	font-size: 20px;
-	position: absolute; top: 5px; right: 5px;
-	border: 3px solid transparent;
+    font-family: "Font Awesome 5 Free";
+    display: block;
+    float: right;
+    font-weight: bold;
+    cursor: pointer;
 }
 
 #close:hover {
-	border-color: #c68e17;
-}
-
-#close::before, #close::after {
-	background-color: #c68e17;
+    transform: scale(1.2);
 }
 
 table {
@@ -213,14 +211,34 @@ body.initialized input[name=create] {
 
 		</style>
 		
-		<script src="/js/snmp.js"></script>
+        <script src="/js/snmp.js"></script>
+        <script>
+
+function showMessage(xhr) {
+    switch (xhr.status) {
+    case 401:
+        alert("Notice!\n\n"+ "세션 만료.");
+
+        break;
+    default:
+        alert(`Error!\n\n오류코드 ${xhr.status}.`);
+    }
+
+    try {
+        console.log(JSON.parse(xhr.responseText).error);
+    } catch (e) {}
+}
+
+        </script>
 	</head>
 	
 	<body class="loading">
 	
 		<form class="dialog" autocomplete="off">
-			<i class="btn_close round" id="close"></i>
-            <h2>경로</h2>
+            <h2>
+                <span  id="close" title="대화창 닫기">&#xf00d;</span>
+                경로
+            </h2>
             <div class="container">
                 <input name="create" type="button" value="경로 생성">
                 <main>
@@ -293,7 +311,12 @@ body.initialized input[name=create] {
 			</div>
 		</form>
         
+        <script src="/js/request.js"></script>
 		<script>
+
+const $ = {
+        request: new Request()
+    };
 
 function close() {
 	top.closeDialog(true);
@@ -337,7 +360,7 @@ document.getElementById("close").onclick = close;
     form.elements["create"].onclick = e => {
         document.body.classList.add("loading");
 
-        top.postRequest({
+        $.request.execute({
             command: "add",
             target: "path",
             nodeFrom: nodeFrom,
@@ -355,9 +378,7 @@ document.getElementById("close").onclick = close;
 
                 break;
 			default:
-				alert(top.getMessage(this.status));
-
-				console.log(this.responseText && JSON.parse(this.responseText).error);
+                showMessage(this);
 			}
         });
     }
@@ -365,7 +386,7 @@ document.getElementById("close").onclick = close;
     form.elements["add_link"].onclick = e => {
         document.body.classList.add("loading");
 
-        top.postRequest({
+        $.request.execute({
             command: "add",
             target: "link",
             nodeFrom: nodeFrom,
@@ -381,9 +402,7 @@ document.getElementById("close").onclick = close;
 
                 break;
 			default:
-				alert(top.getMessage(this.status));
-
-				console.log(this.responseText && JSON.parse(this.responseText).error);
+                showMessage(this);
 			}
         });
     }
@@ -422,7 +441,7 @@ document.getElementById("close").onclick = close;
             link.extra = extra;
         }
 
-        top.postRequest({
+        $.request.execute({
             command: "set",
             target: "link",
             nodeFrom: nodeFrom,
@@ -440,9 +459,7 @@ document.getElementById("close").onclick = close;
 
                 break;
 			default:
-				alert(top.getMessage(this.status));
-
-				console.log(this.responseText && JSON.parse(this.responseText).error);
+                showMessage(this);
 			}
         });
     };
@@ -450,7 +467,7 @@ document.getElementById("close").onclick = close;
 	form.elements["remove_link"].onclick = e => {
 		document.body.classList.add("loading");
 
-        top.postRequest({
+        $.request.execute({
             command: "remove",
             target: "link",
             nodeFrom: nodeFrom,
@@ -467,9 +484,7 @@ document.getElementById("close").onclick = close;
 
                 break;
 			default:
-				alert(top.getMessage(this.status));
-
-				console.log(this.responseText && JSON.parse(this.responseText).error);
+                showMessage(this);
 			}
         });
 	};
@@ -496,7 +511,7 @@ document.getElementById("close").onclick = close;
             }
         });
         
-        top.postRequest({
+        $.request.execute({
             command: "set",
             target: "path",
             nodeFrom: nodeFrom,
@@ -511,9 +526,7 @@ document.getElementById("close").onclick = close;
 
                 break;
             default:
-                alert(top.getMessage(this.status));
-
-                console.log(this.responseText && JSON.parse(this.responseText).error);
+                showMessage(this);
             }
         });
 	};
@@ -533,7 +546,7 @@ document.getElementById("close").onclick = close;
 
         document.body.classList.add("loading");
         
-        top.postRequest({
+        $.request.execute({
             command: "remove",
             target: "path",
             nodeFrom: nodeFrom,
@@ -547,9 +560,7 @@ document.getElementById("close").onclick = close;
 
                 break;
             default:
-                alert(top.getMessage(this.status));
-
-                console.log(this.responseText && JSON.parse(this.responseText).error);
+                showMessage(this);
             }
         });
     }
@@ -560,7 +571,7 @@ document.getElementById("close").onclick = close;
         nodeFrom = from;
         nodeTo = to;
 
-        top.postRequest({
+        $.request.execute({
             command: "get",
             target: "setting",
             key: "customLink",
@@ -577,15 +588,13 @@ document.getElementById("close").onclick = close;
                 
                 break;
             default:
-                alert(top.getMessage(this.status));
-
-                console.log(this.responseText && JSON.parse(this.responseText).error);
+                showMessage(this);
             }
         });
     };
     
     function initNodeFrom() {
-        top.postRequest({
+        $.request.execute({
             command: "get",
             target: "node",
             id: nodeFrom,
@@ -598,15 +607,13 @@ document.getElementById("close").onclick = close;
                 initNodeTo();
                 break;
             default:
-                alert(top.getMessage(this.status));
-
-                console.log(this.responseText && JSON.parse(this.responseText).error);
+                showMessage(this);
             }
         });
     }
 
     function initNodeTo() {
-        top.postRequest({
+        $.request.execute({
             command: "get",
             target: "node",
             id: nodeTo,
@@ -619,9 +626,7 @@ document.getElementById("close").onclick = close;
                 initNode();
                 break;
             default:
-                alert(top.getMessage(this.status));
-
-                console.log(this.responseText && JSON.parse(this.responseText).error);
+                showMessage(this);
             }
         });
     }
@@ -687,7 +692,7 @@ document.getElementById("close").onclick = close;
     }
 
     function initPath() {
-        top.postRequest({
+        $.request.execute({
             command: "get",
             target: "path",
             nodeFrom: nodeFrom,
@@ -713,9 +718,7 @@ document.getElementById("close").onclick = close;
 
                 break;
             default:
-                alert(top.getMessage(this.status));
-
-                console.log(this.responseText && JSON.parse(this.responseText).error);
+                showMessage(this);
             }
         });
     }
@@ -723,7 +726,7 @@ document.getElementById("close").onclick = close;
     function initLink(path) {
         document.body.classList.add("initialized");
 
-        top.postRequest({
+        $.request.execute({
             command: "get",
             target: "link",
             nodeFrom: nodeFrom,
@@ -741,9 +744,7 @@ document.getElementById("close").onclick = close;
 
                 break;
             default:
-                alert(top.getMessage(this.status));
-
-                console.log(this.responseText && JSON.parse(this.responseText).error);
+                showMessage(this);
             }
         });
     }

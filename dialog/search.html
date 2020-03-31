@@ -6,6 +6,7 @@
 		
 		<style>
 @import "/css/style.css";
+@import "/css/fa.css";
 
 body {
 	position: fixed; top: 0; right: 0; bottom: 0; left: 0;
@@ -103,17 +104,15 @@ footer> input:hover {
 }
 
 #close {
-	font-size: 20px;
-	position: absolute; top: 5px; right: 5px;
-	border: 3px solid transparent;
+    font-family: "Font Awesome 5 Free";
+    display: block;
+    float: right;
+    font-weight: bold;
+    cursor: pointer;
 }
 
 #close:hover {
-	border-color: #c68e17;
-}
-
-#close::before, #close::after {
-	background-color: #c68e17;
+    transform: scale(1.2);
 }
 
 .container {
@@ -129,14 +128,33 @@ body:not(.monitor) .monitor {
 }
 
 		</style>
-		
+		<script>
+
+function showMessage(xhr) {
+    switch (xhr.status) {
+    case 401:
+        alert("Notice!\n\n"+ "세션 만료.");
+
+        break;
+    default:
+        alert(`Error!\n\n오류코드 ${xhr.status}.`);
+    }
+
+    try {
+        console.log(JSON.parse(xhr.responseText).error);
+    } catch (e) {}
+}
+
+        </script>
 	</head>
 	
 	<body>
 	
 		<form>
-			<i class="btn_close round" id="close"></i>
-			<h2>네트워크 탐색</h2>
+			<h2>
+                <span  id="close" title="대화창 닫기">&#xf00d;</span>
+                네트워크 탐색
+            </h2>
             <div class="container">
                 <div class="table">
                     <ul>
@@ -176,15 +194,13 @@ body:not(.monitor) .monitor {
                 <div class="bg_loading"></div>
             </div>
 		</form>
-		
+        
+        <script src="/js/request.js"></script>
 		<script>
 
-const thread = new Worker("/js/thread.js");
-
-thread.postMessage({
-    action: "initialize",
-    agent: window.localStorage.getItem("agent")
-});
+const $ = {
+        request: new Request()
+    };
 
 function close() {
 	top.closeDialog(true);
@@ -216,8 +232,13 @@ if (top.account.level === 0) {
     
         document.body.classList.add("loading");
         
-        thread.onmessage = e => {
-            switch (e.data.status) {
+        $.request.execute({
+            command: "search",
+            network: form.elements["network"].value,
+            mask: parseInt(form.elements["mask"].options[form.elements["mask"].selectedIndex].text),
+            profile: form.elements["profile"].value || undefined
+        }, function () {
+            switch (this.status) {
 			case 200:
 				alert("자동 탐지 요청을 처리하고 있습니다.");
 
@@ -225,30 +246,21 @@ if (top.account.level === 0) {
 
 				break;
 			default:
-                alert("Error!\n\n오류 코드 "+ e.data.status);
-
-                console.log(e.data.textResponse && JSON.parse(e.data.textResponse).error);
+                showMessage(this);
 			}
-        };
-
-		thread.postMessage({
-            action: "request",
-            request: {
-                command: "search",
-                network: form.elements["network"].value,
-                mask: parseInt(form.elements["mask"].options[form.elements["mask"].selectedIndex].text),
-                profile: form.elements["profile"].value || undefined
-            }
         });
 	};
 
 	window.initialize = function () {
-        thread.onmessage = e => {
-            switch (e.data.status) {
+        $.request.execute({
+            command: "get",
+            target: "profile"
+        }, function () {
+            switch (this.status) {
 			case 200:
                 const
                     df = document.createDocumentFragment(),
-                    profileData = JSON.parse(e.data.responseText);
+                    profileData = JSON.parse(this.responseText);
 
                 for (let name in profileData) {
                     df.appendChild(document.createElement("option")).text = name;
@@ -258,18 +270,8 @@ if (top.account.level === 0) {
 
 				break;
 			default:
-                alert("Error!\n\n오류 코드 "+ e.data.status);
-
-                console.log(e.data.textResponse && JSON.parse(e.data.textResponse).error);
+                showMessage(this);
 			}
-        };
-
-        thread.postMessage({
-            action: "request",
-            request: {
-                command: "get",
-                target: "profile"
-            }
         });
 	};
 

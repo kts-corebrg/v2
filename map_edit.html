@@ -102,18 +102,18 @@ function onEvent(e) {
 	}
 }
 
-function showMessage(data) {
-    switch (data.status) {
+function showMessage(xhr) {
+    switch (xhr.status) {
     case 401:
         alert("Notice!\n\n"+ "세션 만료.");
 
         break;
     default:
-        alert("Error!\n\n"+ "오류코드: "+ data.status);
+        alert(`Error!\n\n오류코드 ${xhr.status}.`);
     }
 
     try {
-        console.log(JSON.parse(data.responseText).error);
+        console.log(JSON.parse(xhr.responseText).error);
     } catch (e) {}
 }
 
@@ -143,20 +143,17 @@ function reload() {
 		<div class="bg_loading"></div>
 
         <script src="/js/ITAhM.js"></script>
+        <script src="/js/request.js"></script>
 		<script>
 
 const $ = {
-        thread: new Worker("/js/thread.js")
+        request: new Request()
     };
 
 var 
     positionData = {},
 	scale = 1;
 
-$.thread.postMessage({
-    action: "initialize",
-    agent: window.localStorage.getItem("agent")
-});
 
 if (top.account.level === 0) {
 	document.body.classList.add("root");
@@ -169,8 +166,13 @@ document.getElementById("close").onclick = function () {
 document.getElementById("save").onclick = function () {	
 	document.body.classList.add("loading");
 
-    $.thread.onmessage = function (e) {
-        switch (e.data.status) {
+    $.request.execute({
+            command: "set",
+            target: "position",
+            name: "position",
+            position: window.positionData
+        }, function (e) {
+        switch (this.status) {
         case 200:
             alert("Information.\n\n구성의 변경사항을 저장하였습니다.");
 
@@ -178,27 +180,17 @@ document.getElementById("save").onclick = function () {
 
             break;
         case -1:
-            console.trace(e.data.exception);
+            console.trace(this.exception);
         default:
-            showMessage(e.data);
-        }
-    };
-
-    $.thread.postMessage({
-        action: "request",
-        request: {
-            command: "set",
-            target: "position",
-            name: "position",
-            position: window.positionData
+            showMessage(this);
         }
     });
 };
 
 function initNode(e) {
-    switch (e.data.status) {
+    switch (this.status) {
     case 200:
-        const nodeData = JSON.parse(e.data.responseText);
+        const nodeData = JSON.parse(this.responseText);
     try {
         for (let id in nodeData) {
             if (!(id in window.positionData)) {
@@ -212,46 +204,33 @@ function initNode(e) {
         document.querySelector("iframe").src = "/map_editor.html";
         
         break;
-    case -1:
-        console.trace(e.data.exception);
     default:
-        showMessage(e.data);
+        showMessage(this);
     }
 }
 
 function initPosition(e) {
-    switch (e.data.status) {
+    switch (this.status) {
     case 200:
-        window.positionData = JSON.parse(e.data.responseText);
+        window.positionData = JSON.parse(this.responseText);
     case 204:
-        $.thread.onmessage = initNode;
-        
-        $.thread.postMessage({
-            action: "request",
-            request: {
-                command: "get",
-                target: "node",
-            }
-        });
+        $.request.execute({
+            command: "get",
+            target: "node",
+        }, initNode);
 
 		break;
-    case -1:
-        console.trace(e.data.exception);
     default:
-        showMessage(e.data);
+        showMessage(this);
     }
 }
 
-$.thread.onmessage = initPosition;
+$.request.execute({
+    command: "get",
+    target: "position",
+    name: "position"
+}, initPosition);
 
-$.thread.postMessage({
-    action: "request",
-    request: {
-        command: "get",
-        target: "position",
-        name: "position"
-    }
-});
 		</script>
 	
 	</body>

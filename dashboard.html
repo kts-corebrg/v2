@@ -391,18 +391,18 @@ function getNodeList(status) {
     return $.nodeList;
 }
 
-function showMessage(data) {
-    switch (data.status) {
+function showMessage(xhr) {
+    switch (xhr.status) {
     case 401:
         alert("Notice!\n\n"+ "세션 만료.");
 
         break;
     default:
-        alert("Error!\n\n"+ "오류코드: "+ data.status);
+        alert("Error!\n\n"+ "오류코드: "+ xhr.status);
     }
 
     try {
-        console.log(JSON.parse(data.responseText).error);
+        console.log(JSON.parse(xhr.responseText).error);
     } catch (e) {}
 }
 		</script>
@@ -465,6 +465,7 @@ function showMessage(data) {
 
         <script src="/js/ITAhM.js"></script>
         <script src="/js/icon.js"></script>
+        <script src="/js/request.js"></script>
 		<script>
 
 const UPPER_POS = {
@@ -472,7 +473,7 @@ const UPPER_POS = {
 		y: 0
     };
 const $ = {
-    thread: new Worker("/js/thread.js"),
+    request: new Request(),
     upper: window.sessionStorage.getItem("stage_id") && Number(window.sessionStorage.getItem("stage_id")) || undefined,
     iconData: ITAhM.iconData,
     monitorList: [], // 현재 스테이지의 모니터링 대상 노드
@@ -480,11 +481,6 @@ const $ = {
     shutdownList: [],
     criticalList: []
 };
-
-$.thread.postMessage({
-    action: "initialize",
-    agent: window.localStorage.getItem("agent")
-});
 
 document.body.querySelector("div.nav").onclick = function (e) {
 	this.classList.toggle("hide");
@@ -589,47 +585,19 @@ function findParentFromStage(parent) {
 	};
 })();
 
-/*
-document.getElementById("display").onchange = function () {
-    const display = this;
-    
-    display.disabled = true;
-    
-    document.querySelector("iframe.top").contentWindow.display();
-
-    top.postRequest({
-        command: "set",
-        target: "setting",
-        key: "display",
-        value: display.value
-    }, function () {
-        switch (this.status) {
-        case 200:
-            $.settingData.display = display.value;
-
-            document.querySelector("iframe.top").contentWindow.display();
-            document.getElementById("map").contentWindow.display();
-            
-            break;
-        default:
-            alert("Error!\n\n설정을 변경할 수 없습니다.");
-
-            window.location.reload();
-        }
-
-        display.disabled = false;
-    });
-}
-*/
-
 (button => {
     button.onclick = function (e) {
         const option = button.classList.contains("checked")? "name": "address";
 
         document.body.classList.add("loading");
 
-        $.thread.onmessage = function (e) {
-            switch (e.data.status) {
+        $.request.execute({
+            command: "set",
+            target: "setting",
+            key: "display",
+            value: option
+        }, function (e) {
+            switch (this.status) {
             case 200:
                 $.settingData.display = option;
 
@@ -644,20 +612,8 @@ document.getElementById("display").onchange = function () {
                 document.body.classList.remove("loading");
 
                 break;
-            case -1:
-                console.trace(e.data.exception);
             default:
-                showMessage(e.data);
-            }
-        };
-
-        $.thread.postMessage({
-            action: "request",
-            request: {
-                command: "set",
-                target: "setting",
-                key: "display",
-                value: option
+                showMessage(this);
             }
         });
     };
@@ -669,26 +625,19 @@ document.getElementById("display").onchange = function () {
 
         document.body.classList.add("loading");
 
-        $.thread.onmessage = function (e) {
-            switch (e.data.status) {
+        $.request.execute({
+            command: "set",
+            target: "setting",
+            key: "mapMode",
+            value: mode
+        }, function (e) {
+            switch (this.status) {
             case 200:
                 window.location.reload();
             
                 break;
-            case -1:
-                console.trace(e.data.exception);
             default:
-                showMessage(e.data);
-            }
-        };
-
-        $.thread.postMessage({
-            action: "request",
-            request: {
-                command: "set",
-                target: "setting",
-                key: "mapMode",
-                value: mode
+                showMessage(this);
             }
         });
     };
@@ -700,26 +649,19 @@ document.getElementById("display").onchange = function () {
 
         document.body.classList.add("loading");
 
-        $.thread.onmessage = function (e) {
-            switch (e.data.status) {
+        $.request.execute({
+            command: "set",
+            target: "setting",
+            key: "mapDim",
+            value: mode
+        }, function (e) {
+            switch (this.status) {
             case 200:
                 window.location.reload();
 
                 break;
-            case -1:
-                console.trace(e.data.exception);
             default:
-                showMessage(e.data);
-            }
-        };
-    
-        $.thread.postMessage({
-            action: "request",
-            request: {
-                command: "set",
-                target: "setting",
-                key: "mapDim",
-                value: mode
+                showMessage(this);
             }
         });
     };
@@ -872,102 +814,74 @@ function initialize() {
 }
 
 function initNode(e) {
-    switch(e.data.status) {
+    switch(this.status) {
         case 200:
-            $.nodeData = JSON.parse(e.data.responseText);
+            $.nodeData = JSON.parse(this.responseText);
             
-            $.thread.onmessage = initPath;
-
-            $.thread.postMessage({
-                action: "request",
-                request: {
-                    command: "get",
-                    target: "path"
-                }
-            });
-
+            $.request.execute({
+                command: "get",
+                target: "path"
+            }, initPath);
+            
             break;
-        case -1:
-            console.trace(e.data.exception);
         default:
-            showMessage(e.data);
+            showMessage(this);
     }
 }
 
 function initPath(e) {
-    switch(e.data.status) {
+    switch(this.status) {
         case 200:
-            $.pathData = JSON.parse(e.data.responseText);
+            $.pathData = JSON.parse(this.responseText);
             
-            $.thread.onmessage = initLink;
-            
-            $.thread.postMessage({
-                action: "request",
-                request: {
-                    command: "get",
-                    target: "link"
-                }
-            });
+            $.request.execute({
+                command: "get",
+                target: "link"
+            }, initLink);
             
             break;
-        case -1:
-            console.trace(e.data.exception);
         default:
-            showMessage(e.data);
+            showMessage(this);
     }
 }
 
 function initLink(e) {
-    switch(e.data.status) {
+    switch(this.status) {
         case 200:
-            $.linkData = JSON.parse(e.data.responseText);
+            $.linkData = JSON.parse(this.responseText);
             
-            $.thread.onmessage = initPosition;
-            
-            $.thread.postMessage({
-                action: "request",
-                request: {
-                    command: "get",
-                    target: "position",
-                    name: "position"
-                }
-            });
+            $.request.execute({
+                command: "get",
+                target: "position",
+                name: "position"
+            }, initPosition);
         
             break;
-        case -1:
-            console.trace(e.data.exception);
         default:
-            showMessage(e.data);
+            showMessage(this);
     }
 }
 
 function initPosition(e) {
-    switch(e.data.status) {
+    switch(this.status) {
         case 200:
-            $.positionData = JSON.parse(e.data.responseText);
+            $.positionData = JSON.parse(this.responseText);
 
-            $.thread.onmessage = initSetting;
-            
-            $.thread.postMessage({
-                action: "request",
-                request: {
-                    command: "get",
-                    target: "setting"
-                }
-            });
+            $.request.execute({
+                command: "get",
+                target: "setting"
+            }, initSetting);            
             
             break;
-        case -1:
-            console.trace(e.data.exception);
         default:
-            showMessage(e.data);
+            showMessage(this);
     }
 }
 
 function initSetting(e) {
-    switch(e.data.status) {
+    switch(this.status) {
         case 200:
-            $.settingData = JSON.parse(e.data.responseText);
+            $.settingData = JSON.parse(this.responseText);
             
             if ("background" in $.settingData) {
                 document.body.style.backgroundImage = "url("+ $.settingData.background +")";
@@ -999,28 +913,21 @@ function initSetting(e) {
 
             }
 
-            $.thread.onmessage = initIcon;
-            
-            $.thread.postMessage({
-                action: "request",
-                request: {
-                    command: "get",
-                    target: "icon"
-                }
-            });
+            $.request.execute({
+                command: "get",
+                target: "icon"
+            }, initIcon);
 
             break;
-        case -1:
-            console.trace(e.data.exception);
         default:
-            showMessage(e.data);
+            showMessage(this);
     }
 }
 
 function initIcon(e) {
-    switch(e.data.status) {
+    switch(this.status) {
         case 200:
-            const iconData = JSON.parse(e.data.responseText);
+            const iconData = JSON.parse(this.responseText);
 
             for (let type in iconData) {
                 $.iconData[type] = iconData[type];
@@ -1029,22 +936,15 @@ function initIcon(e) {
             initialize();
             
             break;
-        case -1:
-            console.trace(e.data.exception);
         default:
-            showMessage(e.data);
+            showMessage(this);
     }
 }
 
-$.thread.onmessage = initNode;
-
-$.thread.postMessage({
-    action: "request",
-    request: {
-        command: "get",
-        target: "node"
-    }
-});
+$.request.execute({
+    command: "get",
+    target: "node"
+},initNode);
 
 		</script>
 	

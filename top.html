@@ -230,7 +230,7 @@ function initSection() {
 
     window.topSetting.forEach(obj => {
         if (obj.count > 0) {
-            window.request.resource[obj.id] = {
+            $.requestData.resource[obj.id] = {
                 count: obj.count
             }
         }
@@ -351,18 +351,18 @@ function display() {
     }
 }
 
-function showMessage(data) {
-    switch (data.status) {
+function showMessage(xhr) {
+    switch (xhr.status) {
     case 401:
         alert("Notice!\n\n"+ "세션 만료.");
 
         break;
     default:
-        alert("Error!\n\n"+ "오류코드: "+ data.status);
+        alert("Error!\n\n"+ "오류코드: "+ xhr.status);
     }
 
     try {
-        console.log(JSON.parse(data.responseText).error);
+        console.log(JSON.parse(xhr.responseText).error);
     } catch (e) {}
 }
 		</script>
@@ -424,24 +424,25 @@ function showMessage(data) {
                 <div class="list" title="송신 오류"></div>
             </section>
 		</main>
-		
+        
+        <script src="/js/request.js"></script>
 		<script>
 
 const INTERVAL = 8000;
 const $ = {
+    request: new Request(),
+    requestData: {
+		command: "get",
+		target: "top",
+        resource: {
+        }
+	},
     nodeData: parent.getNodeData(),
     settingData: parent.getSettingData(),
     nodeList : parent.getMonitorList()
 };
 
-var
-    request = {
-		command: "get",
-		target: "top",
-        list: $.nodeList,
-        resource: {
-        }
-	};
+$.requestData.list = $.nodeList;
 
 if ("display" in $.settingData && $.settingData.display !== "name") {
 	document.body.classList.remove("name");
@@ -463,7 +464,7 @@ document.querySelector("header span.apply").onclick = function (e) {
     this.disabled = true;
 
     window.topSetting = [];
-    window.request.resource = {};
+    $.requestData.resource = {};
 
     [].forEach.call(document.querySelector("main").querySelectorAll("section"), section => {
 		section.removeAttribute("draggable");
@@ -476,39 +477,31 @@ document.querySelector("header span.apply").onclick = function (e) {
         });
 
         if (count > 0) {
-            window.request.resource[section.id] = {
+            $.requestData.resource[section.id] = {
                 count: count
             }
         }
 	});
 
-    (thread => {
-        const value = JSON.stringify(window.topSetting);
+    $.request.execute({
+        command: "set",
+        target: "setting",
+        key: "top",
+        value: JSON.stringify(window.topSetting)
+    }, function () {
+        switch (this.status) {
+            case 200:
+                document.body.classList.remove("edit");
 
-        thread.postMessage([window.localStorage.getItem("agent"), {
-            command: "set",
-            target: "setting",
-            key: "top",
-            value: value
-        }]);
+                break;
+            default:
+                showMessage(this);
+        }
 
-        thread.onmessage = e => {
-            switch (e.data.status) {
-                case 200:
-                    document.body.classList.remove("edit");
+        this.disabled = false;
 
-                    break;
-                case -1:
-                    console.trace(e.data.exception);
-                default:
-                    showMessage(e.data);
-            }
-
-            this.disabled = false;
-
-            reload();
-        };
-    })(new Worker("/js/post_request.js"));
+        reload();
+    });
 };
 
 document.querySelector("header span.cancel").onclick = e => {
@@ -526,7 +519,8 @@ document.querySelector("header span.cancel").onclick = e => {
 initialize();
 
 function reload() {
-	top.postRequest(window.request, function () {
+    $.request.execute($.requestData
+    , function () {
 		switch (this.status) {
 		case 200:
 			const topData = JSON.parse(this.responseText);
@@ -537,9 +531,7 @@ function reload() {
 			
 			break;
 		default:
-			alert(top.getMessage(this.status));
-
-			console.log(this.responseText && JSON.parse(this.responseText).error);
+			showMessage(this);
 		}
 	});
 
