@@ -106,7 +106,14 @@ function onUpdate(status, elapse) {
     item.title = new Date().toLocaleString();
 }
 
-function onEvent(event) {	
+function onEvent(event) {
+    if (event == null) {
+        alert("Error!\n\n"+
+            "리스너 응답 없음.");
+
+        window.location.reload();
+    }
+
     if (event.level < 0) {
         alert("Notice.\n\n"+
             "관리자가 서비스를 종료하였습니다.");

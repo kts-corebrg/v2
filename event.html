@@ -39,7 +39,17 @@ header::after {
     transform: translate(-50%, -50%);
 }
 
-input[type=date] {
+body:not(.search) nav {
+    display: none;
+}
+
+body.search #report {
+    color: #fcba30;
+}
+
+input[type=date],
+input[type=text],
+input[type=submit] {
 	font-family: arial, tahoma, "맑은 고딕";
 	padding: 0.5em;
 }
@@ -100,7 +110,22 @@ ul {
 
 .item> li:nth-child(1) {
 	flex: none;
-	width: 5em;
+	width: 8em;
+}
+
+#list .item> li:nth-child(1) {
+    height: 100%;
+    background-color: #a0d995;
+    color: #ffffff;
+    text-align: center;
+}
+
+#list .item.major> li:nth-child(1) {
+    background-color: #800000;
+}
+
+#list .item.critical> li:nth-child(1) {
+    background-color: #ffa500;
 }
 
 .item> li:nth-child(2) {
@@ -109,30 +134,36 @@ ul {
 }
 
 .item> li:nth-child(3) {
-	width: 200px;
+	width: 100px;
 	text-align: center;
 }
 
 .item> li:nth-child(4) {
-	flex: 1;
+	width: 200px;
+	text-align: center;
 }
 
 .item> li:nth-child(5) {
-	flex: none;
-    width: 3em;
+	flex: 1;
 }
 
-.item> li:nth-child(5)::before {
+.item> li:nth-child(6) {
+	flex: none;
+    width: 3em;
+    padding: 0;
+}
+
+.item> li:nth-child(6)::before {
     cursor: pointer;
 }
 
-.item:hover> li:nth-child(5)::before {
+.item:hover> li:nth-child(6)::before {
     font: 1.6em "Font Awesome 5 Free";   
     content: "\f4ad";
     color: #24292e;
 }
 
-.item.memo> li:nth-child(5)::before {
+.item.memo> li:nth-child(6)::before {
     font: 1.6em "Font Awesome 5 Free";
     content: "\f4ad";
     color: #5cb85c;
@@ -155,6 +186,27 @@ ul {
 .glyph {
     font: 2em "Font Awesome 5 Free";
     cursor: pointer;
+}
+
+nav {
+    background-color: #fefefe;
+    padding: 1em;
+}
+
+nav table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+nav th {
+    width: 200px;
+    background-color: #f9f9f9;
+}
+
+nav th,
+nav td {
+    border: 1px solid #999999;
+    padding: 0.5em;
 }
 
 details {
@@ -211,6 +263,15 @@ function getDateString(mills) {
 	return yyyy +"년 "+ (mm > 9? "": "0") + mm +"월"+ (dd > 9? "": "0") + dd +"일";
 }
 
+function toDateString(mills) {
+	var date = new Date(mills),
+		yyyy = date.getFullYear(),
+		mm = date.getMonth() +1,
+		dd = date.getDate();
+	
+	return `${yyyy}-${(mm > 9? "": "0") + mm}-${(dd > 9? "": "0") + dd}`;
+}
+
 function toTimeString(mills) {
 	var date = new Date(mills),
 		hh = date.getHours(),
@@ -237,10 +298,22 @@ function setMemo(ul, memo) {
 
 function createItem(event) {
 	var ul = document.createElement("ul"),
-		icon = ul.appendChild(document.createElement("li")).appendChild(document.createElement("img")),
         memo = document.createElement("li");
 	
-	ul.appendChild(document.createElement("li")).textContent = toTimeString(event.timestamp);
+    if (event.level === 2) {
+        ul.appendChild(document.createElement("li")).textContent = "Major";
+
+        ul.classList.add("major");
+    } else if (event.level === 1) {
+        ul.appendChild(document.createElement("li")).textContent = "Critical";
+
+        ul.classList.add("critical");
+    } else {
+        ul.appendChild(document.createElement("li")).textContent = "Normal";
+    }
+
+    ul.appendChild(document.createElement("li")).textContent = toDateString(event.timestamp);
+    ul.appendChild(document.createElement("li")).textContent = toTimeString(event.timestamp);
 	ul.appendChild(document.createElement("li")).textContent = event.name;
 	
 	switch(event.origin) {
@@ -268,8 +341,6 @@ function createItem(event) {
 
 	ul.classList.add("item");
 	ul.dataset.id = event.eventID;
-
-	icon.src = event.level === 1? "/img/siren.png": event.level === 2? "/img/warning.png": "/img/normal.png";
 	
     ul.appendChild(memo);
     
@@ -305,23 +376,57 @@ function showMessage(xhr) {
             <header>
                 <details title="날짜 선택">
                     <summary class="glyph">&#xf073;</summary>
-                    <form class="popup">
-                        <input type="date" name="date">        
+                    <form id="calendar" class="popup">
+                        <input type="date" name="date">   
                     </form>
                 </details>
                 <span class="glyph" id="export" title="CSV 저장">&#xf019;</span>
+                <span class="glyph" id="report" title="조건 검색">&#xf002;</span>
             </header>
+            <nav>
+                <form id="search">
+                    <table>
+                        <tbody>
+                            <tr>
+                                <th>조회기간</th>
+                                <td>
+                                    <input type="date" name="start">
+                                    ~
+                                    <input type="date" name="end">
+                                    <input type="submit" value="검색">
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>노드명</th>
+                                <td>
+                                    <input type="text" name="keyword">
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>상태</th>
+                                <td>
+                                    <input type="checkbox" name="major" checked>Major
+                                    <input type="checkbox" name="critical" checked>Critical
+                                    <input type="checkbox" name="normal" checked>Normal
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </form>
+            </nav>
             <div class="container">
                 <div class="header">
                     <ul class="item">
                         <li>상태
+                        <li>날짜
                         <li>시간
-                        <li>대상
+                        <li>노드명
                         <li>이벤트 메세지 (<span id="count"></span>)
                     </ul>
                 </div>
                 <div id="list"></div>
             </div>
+            <div class="tab"></div>
         </main>
   		
 		<div class="bg_loading"></div>
@@ -330,11 +435,12 @@ function showMessage(xhr) {
         <script src="js/request.js"></script>
 		<script>
 
-const $ = {};
+const $ = {
+        list: document.getElementById("list")
+    };
 
 (function (form) {
-	const today = new Date(),
-		list = document.getElementById("list");
+	const today = new Date();
 	
 	top.clearLog();
 
@@ -352,14 +458,14 @@ const $ = {};
 	function postRequest(mills) {
 		document.body.classList.add("loading");	
 
-		for(let log; log = window.list.firstChild;) {
-			window.list.removeChild(log);
+		for(let log; log = $.list.firstChild;) {
+			$.list.removeChild(log);
 		}
 		
 		new Request().execute({
 			command: "get",
             target: "event",
-			date: mills.toString()
+			date: mills
 		}, function () {
 			switch (this.status) {
 			case 200:
@@ -381,7 +487,7 @@ const $ = {};
 					}
 				}
 				
-				window.list.appendChild(df);
+				$.list.appendChild(df);
 				
 				list.scrollTop = list.scrollHeight;	
 				
@@ -395,12 +501,98 @@ const $ = {};
 			}
 		});
 	}
-}) (document.querySelector("form"));
+}) (document.getElementById("calendar"));
+
+(function (form) {
+	const
+        today = new Date(),
+		list = document.getElementById("list");
+
+        today.setHours(9, 0, 0, 0);
+
+    form.elements["start"].valueAsDate = today;
+    form.elements["end"].valueAsDate = today;
+
+    form.onsubmit = function (e) {
+        e.preventDefault();
+        
+        document.body.classList.add("loading");	
+
+		for(let log; log = $.list.firstChild;) {
+			$.list.removeChild(log);
+		}
+
+        const
+            start = form.elements["start"].valueAsDate.setHours(0, 0, 0, 0),
+            end = form.elements["end"].valueAsDate.setHours(0, 0, 0, 0),
+            search = {
+                start: Math.min(start, end),
+                end: Math.max(start, end)
+            };
+        
+        if (form.elements["keyword"].value) {
+            search.keyword = form.elements["keyword"].value;
+        }
+
+        if (form.elements["major"].checked) {
+            search.major = true;
+        }
+
+        if (form.elements["critical"].checked) {
+            search.critical = true;
+        }
+
+        if (form.elements["normal"].checked) {
+            search.normal = true;
+        }
+
+        new Request().execute({
+			command: "get",
+            target: "event",
+            search: search
+		}, function () {
+			switch (this.status) {
+			case 200:
+                document.body.querySelector("header").dataset.date = "조건 검색";
+                $.eventData = JSON.parse(this.responseText);
+                $.indexArray = Object.keys($.eventData).sort(function (a, b) {
+                    return parseInt(a) - parseInt(b);
+                });
+
+				const
+                    df = document.createDocumentFragment(),
+                    count = $.indexArray.length;
+				
+				for (let i=0, item; i<count; i++) {
+					if (item = createItem($.eventData[$.indexArray[i]])) {
+						df.appendChild(item);
+					}
+				}
+				
+				$.list.appendChild(df);
+				
+				list.scrollTop = list.scrollHeight;	
+				
+				document.getElementById("count").textContent = count;
+
+				document.body.classList.remove("loading");
+		
+				break;
+			default:
+				showMessage(this);
+			}
+		});
+    };
+}) (document.getElementById("search"));
+
+document.getElementById("report").onclick = function (e) {
+    document.body.classList.toggle("search");
+};
 
 document.getElementById("export").onclick = function (e) {
     const rows = [];
 	
-	rows[0] = "Index,Time,Status,Name,Message,Action";
+	rows[0] = "Index,Date,Time,Status,Name,Message,Action";
 
     for (let i=0, count=$.indexArray.length, event; i<count; i++) {
         event = $.eventData[$.indexArray[i]];
@@ -411,8 +603,9 @@ document.getElementById("export").onclick = function (e) {
 
         rows.push([
             event.eventID,
+            toDateString(event.timestamp),
             toTimeString(event.timestamp),
-            event.level == 1? "임계": event.level == 2? "장애": "정상",
+            event.level == 1? "Critical": event.level == 2? "Major": "Normal",
             event.name,
             event.message,
             "memo" in event? ("\""+ event.memo.value.replace(/\"/g, "'") +"\""): ""

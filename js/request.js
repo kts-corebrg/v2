@@ -155,7 +155,7 @@ function Request() {
                 if (xhr.status === 200) {
                     const event = JSON.parse(xhr.responseText);
 
-                    callback(event)
+                    callback(event);
                     
                     listener.eventID = event.eventID +1;
 
@@ -189,7 +189,9 @@ function Request() {
 
             sendEcho = new Date().getTime();
 
-            xhr.send(echo);
+            try {
+                xhr.send(echo);
+            } catch (e) {}
 
             return true;
         }
