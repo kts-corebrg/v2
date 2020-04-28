@@ -139,31 +139,36 @@ ul {
 }
 
 .item> li:nth-child(4) {
-	width: 200px;
+	width: 160px;
 	text-align: center;
 }
 
 .item> li:nth-child(5) {
-	flex: 1;
+	width: 200px;
+	text-align: center;
 }
 
 .item> li:nth-child(6) {
+	flex: 1;
+}
+
+.item> li:nth-child(7) {
 	flex: none;
     width: 3em;
     padding: 0;
 }
 
-.item> li:nth-child(6)::before {
+.item> li:nth-child(7)::before {
     cursor: pointer;
 }
 
-.item:hover> li:nth-child(6)::before {
+.item:hover> li:nth-child(7)::before {
     font: 1.6em "Font Awesome 5 Free";   
     content: "\f4ad";
     color: #24292e;
 }
 
-.item.memo> li:nth-child(6)::before {
+.item.memo> li:nth-child(7)::before {
     font: 1.6em "Font Awesome 5 Free";
     content: "\f4ad";
     color: #5cb85c;
@@ -314,7 +319,8 @@ function createItem(event) {
 
     ul.appendChild(document.createElement("li")).textContent = toDateString(event.timestamp);
     ul.appendChild(document.createElement("li")).textContent = toTimeString(event.timestamp);
-	ul.appendChild(document.createElement("li")).textContent = event.name;
+    ul.appendChild(document.createElement("li")).textContent = event.ip || "";
+	ul.appendChild(document.createElement("li")).textContent = event.name || "";
 	
 	switch(event.origin) {
 	case "exception":
@@ -397,7 +403,7 @@ function showMessage(xhr) {
                                 </td>
                             </tr>
                             <tr>
-                                <th>노드명</th>
+                                <th>이름 | IP</th>
                                 <td>
                                     <input type="text" name="keyword">
                                 </td>
@@ -420,13 +426,13 @@ function showMessage(xhr) {
                         <li>상태
                         <li>날짜
                         <li>시간
-                        <li>노드명
+                        <li>IP
+                        <li>이름
                         <li>이벤트 메세지 (<span id="count"></span>)
                     </ul>
                 </div>
                 <div id="list"></div>
             </div>
-            <div class="tab"></div>
         </main>
   		
 		<div class="bg_loading"></div>
@@ -592,7 +598,7 @@ document.getElementById("report").onclick = function (e) {
 document.getElementById("export").onclick = function (e) {
     const rows = [];
 	
-	rows[0] = "Index,Date,Time,Status,Name,Message,Action";
+	rows[0] = "Index,Date,Time,Status,IP, Name,Message,Action";
 
     for (let i=0, count=$.indexArray.length, event; i<count; i++) {
         event = $.eventData[$.indexArray[i]];
@@ -606,7 +612,8 @@ document.getElementById("export").onclick = function (e) {
             toDateString(event.timestamp),
             toTimeString(event.timestamp),
             event.level == 1? "Critical": event.level == 2? "Major": "Normal",
-            event.name,
+            event.ip || "",
+            event.name || "",
             event.message,
             "memo" in event? ("\""+ event.memo.value.replace(/\"/g, "'") +"\""): ""
         ].join(","));

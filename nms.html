@@ -151,7 +151,7 @@ function onEvent(event) {
         };
     }
 
-    $.log.textContent = event.message;
+    $.log.textContent = `${event.name || event.ip || ""} ${event.message}`;
 
     try {
         $.frame.contentWindow.onEvent(event);
